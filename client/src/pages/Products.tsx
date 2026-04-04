@@ -334,18 +334,17 @@ export default function Products() {
             )}
           </nav>
           
-          {activeSubcategory?.description && (
-            <div className="mb-4 px-4 py-3 rounded-xl bg-primary/10 border border-primary/20 text-sm text-foreground leading-relaxed" data-testid="text-subcategory-description">
-              {activeSubcategory.description}
-            </div>
-          )}
-
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h1 className="text-2xl font-bold mb-1" data-testid="text-page-title">
                 {pageTitle}
               </h1>
-              <p className="text-muted-foreground" data-testid="text-results-count">
+              {activeSubcategory?.description && (
+                <p className="text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed" data-testid="text-subcategory-description">
+                  {activeSubcategory.description}
+                </p>
+              )}
+              <p className="text-muted-foreground mt-1" data-testid="text-results-count">
                 {pagination.total} products
               </p>
             </div>

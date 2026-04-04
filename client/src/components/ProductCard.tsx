@@ -220,7 +220,7 @@ export default function ProductCard({
   
   return (
     <Card 
-      className="overflow-hidden cursor-pointer hover-elevate active-elevate-2 group flex flex-col h-[300px] md:h-[360px]"
+      className="overflow-hidden cursor-pointer hover-elevate active-elevate-2 group flex flex-col h-[300px] md:h-[360px] !bg-transparent"
       onClick={() => onClick ? onClick() : setLocation(`/product/${productDetailId}`)}
       onMouseEnter={() => prefetchProduct(productDetailId)}
       data-testid={testId}
@@ -247,7 +247,7 @@ export default function ProductCard({
 
         {isBestseller && (
           <div className="absolute top-2 left-2">
-            <Star className="h-6 w-6 fill-yellow-400 text-yellow-400 drop-shadow" data-testid={`icon-bestseller-${id}`} />
+            <Star className="h-6 w-6 fill-primary text-primary drop-shadow" data-testid={`icon-bestseller-${id}`} />
           </div>
         )}
 

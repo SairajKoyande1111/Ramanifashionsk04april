@@ -367,20 +367,18 @@ export default function Home() {
         >
           <div className="max-w-7xl mx-auto px-4">
             <motion.div
-              className="flex flex-row items-center justify-between gap-4 mb-6"
+              className="flex justify-center mb-6"
               initial={{ opacity: 0, y: -20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="text-center sm:text-left flex-1">
-                <h2
-                  className="text-2xl md:text-3xl font-bold font-serif bg-primary text-white border-2 border-white rounded-full px-6 md:px-8 py-2 md:py-3 inline-block"
-                  data-testid="text-section-shop-by-category"
-                >
-                  Shop by Category
-                </h2>
-              </div>
+              <h2
+                className="text-2xl md:text-3xl font-bold font-serif bg-primary text-white border-2 border-white rounded-full px-6 md:px-8 py-2 md:py-3 inline-block"
+                data-testid="text-section-shop-by-category"
+              >
+                Shop by Category
+              </h2>
             </motion.div>
             <motion.div
               className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"
@@ -655,68 +653,64 @@ export default function Home() {
         >
           <div className="max-w-7xl mx-auto px-4 lg:px-3">
             <motion.div
-              className="flex flex-row items-center justify-between gap-4 mb-6"
+              className="flex justify-center mb-6"
               initial={{ opacity: 0, y: -20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <div className="text-center sm:text-left flex-1">
-                <h2
-                  className="text-2xl md:text-3xl font-bold font-serif bg-primary text-white border-2 border-white rounded-full px-6 md:px-8 py-2 md:py-3 inline-block"
-                  data-testid="text-section-categories"
-                >
-                  Shop by Category
-                </h2>
-              </div>
-            </motion.div>
-            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
-              <motion.div
-                className="flex items-stretch gap-4 pb-4"
-                variants={staggerContainer}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
+              <h2
+                className="text-2xl md:text-3xl font-bold font-serif bg-primary text-white border-2 border-white rounded-full px-6 md:px-8 py-2 md:py-3 inline-block"
+                data-testid="text-section-categories"
               >
-                {newCategories.map((category, index) => (
-                  <motion.div
-                    key={category.name}
-                    variants={fadeInUp}
-                    transition={{ duration: 0.5 }}
-                    className="flex flex-col w-[160px] md:w-[200px] flex-shrink-0"
-                    onClick={() => {
-                      if (category.name === "Sale") {
-                        setLocation("/sale");
-                      } else {
-                        setLocation(
-                          `/products?category=${encodeURIComponent(category.name)}`,
-                        );
-                      }
-                    }}
-                    data-testid={`category-card-${category.name.toLowerCase().replace(/\s+/g, "-")}`}
-                  >
-                    <div className="overflow-hidden rounded-lg cursor-pointer hover-elevate group h-[300px] md:h-[360px] flex flex-col bg-white shadow">
-                      <div className="h-[70%] overflow-hidden flex-shrink-0">
-                        {category.image ? (
-                          <img
-                            src={category.image}
-                            alt={category.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-pink-100 to-pink-300" />
-                        )}
-                      </div>
-                      <div className="h-[30%] flex items-center justify-center p-2">
-                        <h3 className="text-center text-xs md:text-sm font-bold font-serif text-primary line-clamp-2 leading-tight">
-                          {category.name}
-                        </h3>
-                      </div>
+                Our Collections
+              </h2>
+            </motion.div>
+            <motion.div
+              className="grid grid-cols-3 gap-4 md:gap-6"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
+              {newCategories.map((category, index) => (
+                <motion.div
+                  key={category.name}
+                  variants={fadeInUp}
+                  transition={{ duration: 0.5 }}
+                  className="flex flex-col"
+                  onClick={() => {
+                    if (category.name === "Sale") {
+                      setLocation("/sale");
+                    } else {
+                      setLocation(
+                        `/products?category=${encodeURIComponent(category.name)}`,
+                      );
+                    }
+                  }}
+                  data-testid={`category-card-${category.name.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  <div className="overflow-hidden rounded-lg cursor-pointer hover-elevate group h-[260px] md:h-[340px] flex flex-col shadow">
+                    <div className="h-[70%] overflow-hidden flex-shrink-0">
+                      {category.image ? (
+                        <img
+                          src={category.image}
+                          alt={category.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-pink-100 to-pink-300" />
+                      )}
                     </div>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </div>
+                    <div className="h-[30%] flex items-center justify-center p-2">
+                      <h3 className="text-center text-xs md:text-sm font-bold font-serif text-primary line-clamp-2 leading-tight">
+                        {category.name}
+                      </h3>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
           </div>
         </motion.section>
 
