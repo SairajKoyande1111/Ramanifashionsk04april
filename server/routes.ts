@@ -292,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         query.occasion = occasions.length > 1 ? { $in: occasions } : occasions[0];
       }
       
-      if (inStock === 'true') query.inStock = true;
+      if (inStock === 'false') { /* show all */ } else { query.inStock = true; }
       if (req.query.isNew === 'true') query.isNew = true;
       if (req.query.isBestseller === 'true') query.isBestseller = true;
       if (req.query.isTrending === 'true') query.isTrending = true;
@@ -3369,6 +3369,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/admin/orders/:id/payment-status", authenticateAdmin, async (req, res) => {
+    try {
+      const { paymentStatus } = req.body;
+      if (!['pending', 'paid', 'failed'].includes(paymentStatus)) {
+        return res.status(400).json({ error: 'Invalid payment status' });
+      }
+      const order = await Order.findById(req.params.id);
+      if (!order) return res.status(404).json({ error: 'Order not found' });
+      order.paymentStatus = paymentStatus;
+      order.updatedAt = new Date();
+      await order.save();
+      const populatedOrder = await Order.findById(order._id).populate('userId', 'name email phone').lean();
+      res.json(populatedOrder);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post("/api/admin/orders/:id/deliver", authenticateAdmin, async (req, res) => {
     try {
       const { paymentReceived = false } = req.body;
@@ -3648,6 +3666,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/home-circles", async (req, res) => {
+    try {
+      let settings = await Settings.findOne();
+      if (!settings) {
+        settings = await Settings.create({ shippingCharges: 0, freeShippingThreshold: 999 });
+      }
+      res.json({ homeCircles: settings.homeCircles || [] });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/admin/home-circles", authenticateAdmin, async (req, res) => {
+    try {
+      const { homeCircles } = req.body;
+      if (!Array.isArray(homeCircles)) {
+        return res.status(400).json({ error: 'homeCircles must be an array' });
+      }
+      let settings = await Settings.findOne();
+      if (!settings) {
+        settings = await Settings.create({ shippingCharges: 0, freeShippingThreshold: 999 });
+      }
+      settings.homeCircles = homeCircles;
+      settings.markModified('homeCircles');
+      settings.updatedAt = new Date();
+      await settings.save();
+      res.json({ homeCircles: settings.homeCircles });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronRight, ImageIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, X, ChevronDown, ChevronRight, ImageIcon, ArrowUp, ArrowDown, Circle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -82,6 +82,61 @@ export default function CategoryManagement() {
   const { data: categories, isLoading } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
   });
+
+  const { data: homeCirclesData } = useQuery<any>({
+    queryKey: ["/api/home-circles"],
+  });
+
+  const [homeCirclesList, setHomeCirclesList] = useState<Array<{ name: string; image: string; order: number }>>([]);
+  const [showCirclesSection, setShowCirclesSection] = useState(false);
+
+  useEffect(() => {
+    if (homeCirclesData?.homeCircles) {
+      const sorted = [...homeCirclesData.homeCircles].sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+      setHomeCirclesList(sorted);
+    }
+  }, [homeCirclesData]);
+
+  const saveHomeCirclesMutation = useMutation({
+    mutationFn: (circles: any[]) =>
+      apiRequest("/api/admin/home-circles", "PUT", { homeCircles: circles }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/home-circles"] });
+      toast({ title: "Home circles updated successfully!" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const allSubcategories: Array<{ name: string; image: string }> = [];
+  (categories || []).forEach((cat) => {
+    (cat.subCategories || []).forEach((sub: any) => {
+      if (!allSubcategories.find(s => s.name === sub.name)) {
+        allSubcategories.push({ name: sub.name, image: sub.image || "" });
+      }
+    });
+  });
+
+  const moveCircle = (index: number, direction: 'up' | 'down') => {
+    const newList = [...homeCirclesList];
+    const swapIdx = direction === 'up' ? index - 1 : index + 1;
+    if (swapIdx < 0 || swapIdx >= newList.length) return;
+    [newList[index], newList[swapIdx]] = [newList[swapIdx], newList[index]];
+    const reordered = newList.map((item, i) => ({ ...item, order: i }));
+    setHomeCirclesList(reordered);
+  };
+
+  const removeCircle = (index: number) => {
+    const newList = homeCirclesList.filter((_, i) => i !== index).map((item, i) => ({ ...item, order: i }));
+    setHomeCirclesList(newList);
+  };
+
+  const addCircle = (sub: { name: string; image: string }) => {
+    if (homeCirclesList.find(c => c.name === sub.name)) return;
+    const newList = [...homeCirclesList, { name: sub.name, image: sub.image, order: homeCirclesList.length }];
+    setHomeCirclesList(newList);
+  };
 
   const uploadCategoryImageMutation = useMutation({
     mutationFn: async ({ id, file }: { id: string; file: File }) => {
@@ -245,6 +300,99 @@ export default function CategoryManagement() {
               Manage main category images and their subcategories
             </p>
           </div>
+
+          {/* Home Page Circles Management */}
+          <Card className="border-pink-200 dark:border-gray-700 shadow-sm mb-6">
+            <CardHeader className="pb-3">
+              <button
+                className="flex items-center gap-3 w-full text-left hover:opacity-80 transition-opacity"
+                onClick={() => setShowCirclesSection(!showCirclesSection)}
+                data-testid="button-toggle-circles-section"
+              >
+                {showCirclesSection ? <ChevronDown className="h-5 w-5 text-pink-500" /> : <ChevronRight className="h-5 w-5 text-muted-foreground" />}
+                <Circle className="h-5 w-5 text-pink-500" />
+                <div>
+                  <CardTitle className="text-lg text-gray-900 dark:text-white">Home Page Circles</CardTitle>
+                  <CardDescription>Manage which subcategories appear in the circles section on the home screen and their order</CardDescription>
+                </div>
+              </button>
+            </CardHeader>
+            {showCirclesSection && (
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Current Circles (drag to reorder using up/down arrows)</Label>
+                  {homeCirclesList.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-2">No circles configured. Add subcategories from below.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {homeCirclesList.map((circle, idx) => (
+                        <div key={circle.name} className="flex items-center gap-3 p-2 bg-pink-50 dark:bg-gray-700 rounded-lg border border-pink-100 dark:border-gray-600">
+                          <span className="text-xs font-bold text-pink-400 w-6 text-center">{idx + 1}</span>
+                          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-pink-300 flex-shrink-0">
+                            {circle.image ? (
+                              <img src={circle.image} alt={circle.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-pink-100 flex items-center justify-center">
+                                <ImageIcon className="h-4 w-4 text-pink-300" />
+                              </div>
+                            )}
+                          </div>
+                          <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200">{circle.name}</span>
+                          <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => moveCircle(idx, 'up')} disabled={idx === 0} data-testid={`button-circle-up-${idx}`}>
+                              <ArrowUp className="h-3 w-3" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => moveCircle(idx, 'down')} disabled={idx === homeCirclesList.length - 1} data-testid={`button-circle-down-${idx}`}>
+                              <ArrowDown className="h-3 w-3" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => removeCircle(idx)} data-testid={`button-circle-remove-${idx}`}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {allSubcategories.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Available Subcategories (click to add)</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {allSubcategories
+                        .filter(sub => !homeCirclesList.find(c => c.name === sub.name))
+                        .map((sub) => (
+                          <button
+                            key={sub.name}
+                            onClick={() => addCircle(sub)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-pink-200 dark:border-gray-600 rounded-full text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-pink-50 dark:hover:bg-gray-700 transition-colors"
+                            data-testid={`button-add-circle-${sub.name.toLowerCase().replace(/\s+/g, '-')}`}
+                          >
+                            {sub.image && <img src={sub.image} alt={sub.name} className="w-5 h-5 rounded-full object-cover" />}
+                            <Plus className="h-3 w-3 text-pink-500" />
+                            {sub.name}
+                          </button>
+                        ))}
+                      {allSubcategories.filter(sub => !homeCirclesList.find(c => c.name === sub.name)).length === 0 && (
+                        <p className="text-sm text-muted-foreground">All subcategories are already in the circles list.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white"
+                    disabled={saveHomeCirclesMutation.isPending}
+                    onClick={() => saveHomeCirclesMutation.mutate(homeCirclesList)}
+                    data-testid="button-save-circles"
+                  >
+                    {saveHomeCirclesMutation.isPending ? "Saving..." : "Save Circles Order"}
+                  </Button>
+                </div>
+              </CardContent>
+            )}
+          </Card>
 
           {isLoading ? (
             <div className="flex items-center justify-center py-20">

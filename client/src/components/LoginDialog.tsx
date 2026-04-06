@@ -210,6 +210,14 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
           <div className="flex flex-col justify-center p-8 lg:px-16 lg:py-12 bg-white">
             {step === "phone" ? (
               <div className="space-y-8">
+                <div className="flex justify-center lg:hidden mb-2">
+                  <img
+                    src={ramaniLogo}
+                    alt="Ramani Fashion"
+                    className="w-40 h-auto"
+                    data-testid="img-ramani-logo-mobile"
+                  />
+                </div>
                 <div className="space-y-3">
                   <h1 className="text-3xl font-bold text-gray-900" data-testid="text-login-title">
                     Enter Mobile Number

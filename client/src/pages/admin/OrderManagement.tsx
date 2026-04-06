@@ -195,6 +195,32 @@ export default function OrderManagement() {
     }
   });
 
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: ({ orderId, paymentStatus }: { orderId: string; paymentStatus: string }) =>
+      apiRequest(`/api/admin/orders/${orderId}/payment-status`, "PATCH", { paymentStatus }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
+      toast({ title: "Payment status updated!" });
+      setSelectedOrder(data);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const getDisplayPaymentStatus = (order: Order): string => {
+    if (order.orderStatus === 'cancelled' && order.paymentStatus === 'pending' && order.paymentMethod === 'cod') {
+      return 'cancelled';
+    }
+    return order.paymentStatus;
+  };
+
+  const getDisplayPaymentStatusColor = (order: Order): string => {
+    const status = getDisplayPaymentStatus(order);
+    if (status === 'cancelled') return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+    return getStatusColor(status, 'payment');
+  };
+
   const handleViewDetails = async (orderId: string) => {
     try {
       const order = await apiRequest(`/api/admin/orders/${orderId}`, "GET");
@@ -576,10 +602,10 @@ export default function OrderManagement() {
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          className={getStatusColor(order.paymentStatus, 'payment')}
+                          className={getDisplayPaymentStatusColor(order)}
                           data-testid={`badge-payment-status-${order._id}`}
                         >
-                          {order.paymentStatus}
+                          {getDisplayPaymentStatus(order)}
                         </Badge>
                       </TableCell>
                       <TableCell data-testid={`text-date-${order._id}`}>
@@ -650,10 +676,10 @@ export default function OrderManagement() {
                     <div>
                       <div className="text-xs text-muted-foreground">Payment</div>
                       <Badge 
-                        className={getStatusColor(order.paymentStatus, 'payment')}
+                        className={getDisplayPaymentStatusColor(order)}
                         data-testid={`badge-card-payment-${order._id}`}
                       >
-                        {order.paymentStatus}
+                        {getDisplayPaymentStatus(order)}
                       </Badge>
                     </div>
                     <div className="text-right">
@@ -966,6 +992,23 @@ export default function OrderManagement() {
                         </Button>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {selectedOrder.orderStatus === 'delivered' && selectedOrder.paymentStatus === 'pending' && selectedOrder.paymentMethod === 'cod' && (
+                  <div className="space-y-3 pt-4 border-t">
+                    <div className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950 p-3 rounded-md">
+                      💰 Order delivered but payment not yet received. Update payment status when collected.
+                    </div>
+                    <Button
+                      onClick={() => updatePaymentStatusMutation.mutate({ orderId: selectedOrder._id, paymentStatus: 'paid' })}
+                      disabled={updatePaymentStatusMutation.isPending}
+                      className="w-full border-green-600 bg-green-600 hover:bg-green-700 text-white"
+                      data-testid="button-mark-payment-received"
+                    >
+                      <Banknote className="h-4 w-4 mr-2" />
+                      {updatePaymentStatusMutation.isPending ? 'Updating...' : 'Mark Payment Received'}
+                    </Button>
                   </div>
                 )}
               </div>
