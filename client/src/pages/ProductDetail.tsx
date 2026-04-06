@@ -45,6 +45,15 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [similarSort, setSimilarSort] = useState("rating-desc");
   const [selectedBlouseSize, setSelectedBlouseSize] = useState<string | null>(null);
+  const [isZooming, setIsZooming] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+
+  const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomPos({ x, y });
+  };
 
   // Extract base product ID and variant index from URL
   const { baseProductId, variantIndexFromUrl } = useMemo(() => {
@@ -382,19 +391,32 @@ export default function ProductDetail() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={selectedImage}
-                className="bg-card rounded-md overflow-hidden"
+                className="bg-card rounded-md overflow-hidden relative"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
+                onMouseEnter={() => setIsZooming(true)}
+                onMouseLeave={() => setIsZooming(false)}
+                onMouseMove={handleImageMouseMove}
+                style={{ cursor: isZooming ? 'zoom-in' : 'default' }}
               >
                 <img
                   src={images[selectedImage] || "/default-saree.jpg"}
                   alt={product.name}
-                  className="w-full h-auto aspect-[2/3] object-cover"
+                  className="w-full h-auto aspect-[2/3] object-cover transition-transform duration-100 ease-out"
+                  style={{
+                    transform: isZooming ? 'scale(2.2)' : 'scale(1)',
+                    transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+                  }}
                   data-testid="img-product-main"
                   onError={(e) => { e.currentTarget.src = '/default-saree.jpg'; }}
                 />
+                {!isZooming && (
+                  <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full pointer-events-none select-none">
+                    🔍 Hover to zoom
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
 
