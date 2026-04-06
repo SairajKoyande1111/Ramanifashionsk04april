@@ -24,7 +24,14 @@ const productSchema = new Schema({
         }
       },
       stockQuantity: { type: Number, default: 0 },
-      inStock: { type: Boolean, default: true }
+      inStock: { type: Boolean, default: true },
+      blouseSizes: {
+        type: [{
+          size: { type: String, required: true },
+          stockQuantity: { type: Number, default: 0 },
+        }],
+        default: [],
+      },
     }],
     validate: {
       validator: function(v: any[]) {

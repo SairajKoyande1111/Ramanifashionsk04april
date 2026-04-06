@@ -9,11 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload, Link as LinkIcon, Trash2, Edit2, Plus, X } from "lucide-react";
 import { compressImageFile } from "@/lib/compressImage";
 
+export interface BlouseSize {
+  size: string;
+  stockQuantity: number;
+}
+
 export interface ColorVariant {
   color: string;
   images: string[];
   stockQuantity: number;
   inStock: boolean;
+  blouseSizes?: BlouseSize[];
 }
 
 interface ColorVariantEditorProps {
@@ -21,9 +27,10 @@ interface ColorVariantEditorProps {
   onChange: (variants: ColorVariant[]) => void;
   availableColors: string[];
   adminToken: string | null;
+  isBlouse?: boolean;
 }
 
-export function ColorVariantEditor({ variants, onChange, availableColors, adminToken }: ColorVariantEditorProps) {
+export function ColorVariantEditor({ variants, onChange, availableColors, adminToken, isBlouse = false }: ColorVariantEditorProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null, null]);
   
@@ -34,6 +41,12 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
   const [isUploading, setIsUploading] = useState<boolean[]>([false, false, false, false, false]);
   const [uploadFailed, setUploadFailed] = useState<boolean[]>([false, false, false, false, false]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  const [blouseSizes, setBlouseSizes] = useState<BlouseSize[]>([]);
+  const [newSizeInput, setNewSizeInput] = useState("");
+  const [newSizeStock, setNewSizeStock] = useState(0);
+
+  const blouseTotalStock = blouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
 
   const handleImageUpload = async (slotIndex: number, file: File) => {
     setIsUploading(prev => {
@@ -115,6 +128,25 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
     });
   };
 
+  const handleAddSize = () => {
+    const trimmed = newSizeInput.trim();
+    if (!trimmed) {
+      toast({ title: "Enter a size", variant: "destructive" });
+      return;
+    }
+    if (blouseSizes.some(s => s.size === trimmed)) {
+      toast({ title: "Size already added", variant: "destructive" });
+      return;
+    }
+    setBlouseSizes(prev => [...prev, { size: trimmed, stockQuantity: newSizeStock }]);
+    setNewSizeInput("");
+    setNewSizeStock(0);
+  };
+
+  const handleRemoveSize = (i: number) => {
+    setBlouseSizes(prev => prev.filter((_, idx) => idx !== i));
+  };
+
   const handleAddOrUpdateVariant = () => {
     if (!selectedColor) {
       toast({ 
@@ -161,6 +193,46 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
         description: "Please retry failed uploads or remove them before adding this color variant",
         variant: "destructive" 
       });
+      return;
+    }
+
+    if (isBlouse) {
+      if (blouseSizes.length === 0) {
+        toast({ 
+          title: "Add at least one size",
+          description: "Blouse variants require at least one size with stock quantity",
+          variant: "destructive" 
+        });
+        return;
+      }
+      const totalStock = blouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
+      const variant: ColorVariant = {
+        color: selectedColor,
+        images: validImages,
+        stockQuantity: totalStock,
+        inStock: totalStock > 0,
+        blouseSizes: [...blouseSizes],
+      };
+      if (editingIndex !== null) {
+        const updated = [...variants];
+        updated[editingIndex] = variant;
+        onChange(updated);
+        toast({ title: "Color variant updated!" });
+        setEditingIndex(null);
+      } else {
+        if (variants.some(v => v.color === selectedColor)) {
+          toast({ title: "Color already exists", description: "This color has already been added", variant: "destructive" });
+          return;
+        }
+        onChange([...variants, variant]);
+        toast({ title: "Color variant added successfully!" });
+      }
+      setSelectedColor("");
+      setCurrentImages(["", "", "", "", ""]);
+      setBlouseSizes([]);
+      setNewSizeInput("");
+      setNewSizeStock(0);
+      setUploadFailed([false, false, false, false, false]);
       return;
     }
 
@@ -227,8 +299,12 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       paddedImages.push("");
     }
     setCurrentImages(paddedImages);
-    setStockQuantity(variant.stockQuantity || 0);
-    setInStock(variant.inStock !== undefined ? variant.inStock : true);
+    if (isBlouse) {
+      setBlouseSizes(variant.blouseSizes ? [...variant.blouseSizes] : []);
+    } else {
+      setStockQuantity(variant.stockQuantity || 0);
+      setInStock(variant.inStock !== undefined ? variant.inStock : true);
+    }
     setEditingIndex(index);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -243,6 +319,9 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
     setCurrentImages(["", "", "", "", ""]);
     setStockQuantity(0);
     setInStock(true);
+    setBlouseSizes([]);
+    setNewSizeInput("");
+    setNewSizeStock(0);
     setUploadFailed([false, false, false, false, false]);
     setEditingIndex(null);
   };
@@ -294,43 +373,123 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="stock-quantity" data-testid="label-stock-quantity">
-                Stock Quantity *
-              </Label>
-              <Input
-                id="stock-quantity"
-                type="number"
-                min="0"
-                value={stockQuantity === 0 ? "" : stockQuantity}
-                placeholder="0"
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === "" || raw === "-") { setStockQuantity(0); return; }
-                  const num = Math.floor(Number(raw));
-                  setStockQuantity(isNaN(num) ? 0 : Math.max(0, num));
-                }}
-                data-testid="input-stock-quantity"
-              />
+          {isBlouse ? (
+            <div className="border rounded-xl p-4 space-y-3 bg-pink-50/40">
+              <h3 className="font-semibold text-sm text-pink-700">Sizes & Stock for this Color</h3>
+              <p className="text-xs text-muted-foreground">Add each available size with its own stock quantity. The color's total stock is auto-computed.</p>
+              <div className="flex gap-2 items-end flex-wrap">
+                <div className="space-y-1 flex-1 min-w-[90px]">
+                  <Label className="text-xs">Size</Label>
+                  <Input
+                    placeholder="e.g. 32"
+                    value={newSizeInput}
+                    onChange={(e) => setNewSizeInput(e.target.value)}
+                    className="h-8"
+                    data-testid="input-new-blouse-size"
+                  />
+                </div>
+                <div className="space-y-1 flex-1 min-w-[90px]">
+                  <Label className="text-xs">Stock Qty</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={newSizeStock === 0 ? "" : newSizeStock}
+                    onChange={(e) => {
+                      const v = Math.floor(Number(e.target.value));
+                      setNewSizeStock(isNaN(v) ? 0 : Math.max(0, v));
+                    }}
+                    className="h-8"
+                    data-testid="input-new-blouse-size-stock"
+                  />
+                </div>
+                <Button type="button" size="sm" className="h-8" onClick={handleAddSize} data-testid="button-add-size">
+                  <Plus className="h-3 w-3 mr-1" /> Add Size
+                </Button>
+              </div>
+              {blouseSizes.length > 0 && (
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-pink-100/60">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium">Size</th>
+                        <th className="text-left px-3 py-2 font-medium">Stock</th>
+                        <th className="px-3 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {blouseSizes.map((s, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="px-3 py-2 font-medium">{s.size}</td>
+                          <td className="px-3 py-2">
+                            <Input
+                              type="number"
+                              min="0"
+                              className="h-7 w-24"
+                              value={s.stockQuantity === 0 ? "" : s.stockQuantity}
+                              placeholder="0"
+                              onChange={(e) => {
+                                const v = Math.floor(Number(e.target.value));
+                                setBlouseSizes(prev => prev.map((item, idx) =>
+                                  idx === i ? { ...item, stockQuantity: isNaN(v) ? 0 : Math.max(0, v) } : item
+                                ));
+                              }}
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <button type="button" className="text-red-500 hover:text-red-700 text-xs" onClick={() => handleRemoveSize(i)}>
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="px-3 py-2 bg-pink-50/60 text-xs text-pink-700 font-medium border-t">
+                    Total Stock for this color: {blouseTotalStock}
+                  </div>
+                </div>
+              )}
             </div>
-
-            <div className="space-y-2 flex items-end">
-              <div className="flex items-center gap-2 h-9">
-                <input
-                  id="in-stock"
-                  type="checkbox"
-                  checked={inStock}
-                  onChange={(e) => setInStock(e.target.checked)}
-                  className="h-4 w-4"
-                  data-testid="checkbox-in-stock"
-                />
-                <Label htmlFor="in-stock" className="cursor-pointer" data-testid="label-in-stock">
-                  In Stock
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="stock-quantity" data-testid="label-stock-quantity">
+                  Stock Quantity *
                 </Label>
+                <Input
+                  id="stock-quantity"
+                  type="number"
+                  min="0"
+                  value={stockQuantity === 0 ? "" : stockQuantity}
+                  placeholder="0"
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "" || raw === "-") { setStockQuantity(0); return; }
+                    const num = Math.floor(Number(raw));
+                    setStockQuantity(isNaN(num) ? 0 : Math.max(0, num));
+                  }}
+                  data-testid="input-stock-quantity"
+                />
+              </div>
+
+              <div className="space-y-2 flex items-end">
+                <div className="flex items-center gap-2 h-9">
+                  <input
+                    id="in-stock"
+                    type="checkbox"
+                    checked={inStock}
+                    onChange={(e) => setInStock(e.target.checked)}
+                    className="h-4 w-4"
+                    data-testid="checkbox-in-stock"
+                  />
+                  <Label htmlFor="in-stock" className="cursor-pointer" data-testid="label-in-stock">
+                    In Stock
+                  </Label>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label data-testid="label-color-images">
@@ -455,12 +614,27 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
                           <span className="text-sm text-muted-foreground">
                             {variant.images.length} image{variant.images.length !== 1 ? 's' : ''}
                           </span>
-                          <Badge variant={(variant.inStock ?? true) ? "default" : "secondary"} data-testid={`badge-stock-status-${index}`}>
-                            Stock: {variant.stockQuantity ?? 0}
-                          </Badge>
-                          <Badge variant={(variant.inStock ?? true) ? "default" : "secondary"} data-testid={`badge-availability-${index}`}>
-                            {(variant.inStock ?? true) ? "In Stock" : "Out of Stock"}
-                          </Badge>
+                          {isBlouse ? (
+                            <>
+                              <Badge variant="secondary" data-testid={`badge-stock-status-${index}`}>
+                                Total Stock: {variant.stockQuantity ?? 0}
+                              </Badge>
+                              {variant.blouseSizes && variant.blouseSizes.length > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  Sizes: {variant.blouseSizes.map(s => `${s.size}(${s.stockQuantity})`).join(', ')}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <Badge variant={(variant.inStock ?? true) ? "default" : "secondary"} data-testid={`badge-stock-status-${index}`}>
+                                Stock: {variant.stockQuantity ?? 0}
+                              </Badge>
+                              <Badge variant={(variant.inStock ?? true) ? "default" : "secondary"} data-testid={`badge-availability-${index}`}>
+                                {(variant.inStock ?? true) ? "In Stock" : "Out of Stock"}
+                              </Badge>
+                            </>
+                          )}
                         </div>
                         <div className="flex gap-2 flex-wrap">
                           {variant.images.map((img, imgIndex) => (

@@ -248,11 +248,7 @@ export default function ProductDetail() {
       openLogin();
       return;
     }
-    const productBlouseSizes =
-      product.category === "BLOUSES" && Array.isArray(product.blouseSizes) && product.blouseSizes.length > 0
-        ? product.blouseSizes
-        : [];
-    if (productBlouseSizes.length > 0 && !selectedBlouseSize) {
+    if (blouseSizes.length > 0 && !selectedBlouseSize) {
       toast({ title: "Please select a size before proceeding", variant: "destructive" });
       return;
     }
@@ -304,8 +300,10 @@ export default function ProductDetail() {
     colorVariants && colorVariants[selectedColorIndex];
 
   const blouseSizes: Array<{ size: string; stockQuantity: number }> =
-    product.category === "BLOUSES" && Array.isArray(product.blouseSizes) && product.blouseSizes.length > 0
-      ? product.blouseSizes
+    product.category === "BLOUSES"
+      ? (currentColorVariant?.blouseSizes?.length
+          ? currentColorVariant.blouseSizes
+          : (Array.isArray(product.blouseSizes) && product.blouseSizes.length > 0 ? product.blouseSizes : []))
       : [];
 
   const selectedSizeData = selectedBlouseSize
@@ -626,11 +624,7 @@ export default function ProductDetail() {
                 className="flex-1 min-w-[140px] rounded-full"
                 disabled={!displayInStock || addToCartMutation.isPending}
                 onClick={() => {
-                  const productBlouseSizes =
-                    product.category === "BLOUSES" && Array.isArray(product.blouseSizes) && product.blouseSizes.length > 0
-                      ? product.blouseSizes
-                      : [];
-                  if (productBlouseSizes.length > 0 && !selectedBlouseSize) {
+                  if (blouseSizes.length > 0 && !selectedBlouseSize) {
                     toast({ title: "Please select a size before adding to cart", variant: "destructive" });
                     return;
                   }

@@ -110,9 +110,6 @@ export default function ProductManagement() {
   const excelImportRef = useRef<HTMLInputElement>(null);
 
   const [colorVariants, setColorVariants] = useState<ColorVariant[]>([]);
-  const [blouseSizes, setBlouseSizes] = useState<BlouseSize[]>([]);
-  const [newSizeInput, setNewSizeInput] = useState<string>("");
-  const [newSizeStock, setNewSizeStock] = useState<number>(0);
 
   const defaultJewelleryData: JewelleryImagesState = {
     images: ["", "", "", "", ""],
@@ -298,9 +295,6 @@ export default function ProductManagement() {
       setIncludes: "",
     });
     setColorVariants([]);
-    setBlouseSizes([]);
-    setNewSizeInput("");
-    setNewSizeStock(0);
     setJewelleryData(defaultJewelleryData);
     setSelectedMainCategory(null);
   };
@@ -367,19 +361,8 @@ export default function ProductManagement() {
       anyInStock = jewelleryData.stockQuantity > 0 ? jewelleryData.inStock : false;
     } else {
       finalColorVariants = colorVariants;
-      if (isBlouse && blouseSizes.length > 0) {
-        totalStock = blouseSizes.reduce((sum, s) => sum + (s.stockQuantity ?? 0), 0);
-      } else {
-        totalStock = colorVariants.reduce((sum, variant) => sum + (variant.stockQuantity ?? 0), 0);
-      }
-      anyInStock = colorVariants.some(variant => {
-        const stock = variant.stockQuantity ?? 0;
-        const isInStock = variant.inStock ?? true;
-        return isInStock && stock > 0;
-      });
-      if (isBlouse && blouseSizes.length > 0) {
-        anyInStock = blouseSizes.some(s => (s.stockQuantity ?? 0) > 0);
-      }
+      totalStock = colorVariants.reduce((sum, variant) => sum + (variant.stockQuantity ?? 0), 0);
+      anyInStock = colorVariants.some(variant => (variant.stockQuantity ?? 0) > 0);
     }
 
     const formattedData = {
@@ -391,7 +374,7 @@ export default function ProductManagement() {
       subcategory: productForm.subcategory || undefined,
       fabric: productForm.fabric || undefined,
       colorVariants: finalColorVariants,
-      blouseSizes: isBlouse ? blouseSizes : [],
+      blouseSizes: [],
       occasion: productForm.occasion || undefined,
       pattern: productForm.pattern || undefined,
       workType: productForm.workType || undefined,
@@ -558,109 +541,8 @@ export default function ProductManagement() {
                       onChange={setColorVariants}
                       availableColors={AVAILABLE_COLORS}
                       adminToken={adminToken}
+                      isBlouse={productForm.category === "BLOUSES"}
                     />
-                  )}
-
-                  {/* Step 3b: Blouse Sizes (only for BLOUSES) */}
-                  {fieldConfig?.showBlouseSizes && (
-                    <div className="border rounded-xl p-4 space-y-4 bg-pink-50/40">
-                      <h3 className="font-semibold text-sm text-pink-700">Blouse Sizes & Stock</h3>
-                      <p className="text-xs text-muted-foreground">Add available sizes (e.g. 30, 32, 34, 36, 38, 40) with individual stock quantities.</p>
-
-                      {/* Add new size row */}
-                      <div className="flex gap-2 items-end flex-wrap">
-                        <div className="space-y-1 flex-1 min-w-[100px]">
-                          <Label className="text-xs">Size</Label>
-                          <Input
-                            placeholder="e.g. 32"
-                            value={newSizeInput}
-                            onChange={(e) => setNewSizeInput(e.target.value)}
-                            className="h-8"
-                          />
-                        </div>
-                        <div className="space-y-1 flex-1 min-w-[100px]">
-                          <Label className="text-xs">Stock Qty</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            placeholder="0"
-                            value={newSizeStock === 0 ? "" : newSizeStock}
-                            onChange={(e) => {
-                              const v = Math.floor(Number(e.target.value));
-                              setNewSizeStock(isNaN(v) ? 0 : Math.max(0, v));
-                            }}
-                            className="h-8"
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="h-8"
-                          onClick={() => {
-                            const trimmed = newSizeInput.trim();
-                            if (!trimmed) {
-                              toast({ title: "Enter a size", variant: "destructive" });
-                              return;
-                            }
-                            if (blouseSizes.some(s => s.size === trimmed)) {
-                              toast({ title: "Size already added", variant: "destructive" });
-                              return;
-                            }
-                            setBlouseSizes(prev => [...prev, { size: trimmed, stockQuantity: newSizeStock }]);
-                            setNewSizeInput("");
-                            setNewSizeStock(0);
-                          }}
-                        >
-                          Add Size
-                        </Button>
-                      </div>
-
-                      {/* Added sizes table */}
-                      {blouseSizes.length > 0 && (
-                        <div className="border rounded-lg overflow-hidden">
-                          <table className="w-full text-sm">
-                            <thead className="bg-pink-100/60">
-                              <tr>
-                                <th className="text-left px-3 py-2 font-medium">Size</th>
-                                <th className="text-left px-3 py-2 font-medium">Stock</th>
-                                <th className="px-3 py-2"></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {blouseSizes.map((s, i) => (
-                                <tr key={i} className="border-t">
-                                  <td className="px-3 py-2 font-medium">{s.size}</td>
-                                  <td className="px-3 py-2">
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      className="h-7 w-24"
-                                      value={s.stockQuantity === 0 ? "" : s.stockQuantity}
-                                      placeholder="0"
-                                      onChange={(e) => {
-                                        const v = Math.floor(Number(e.target.value));
-                                        setBlouseSizes(prev => prev.map((item, idx) =>
-                                          idx === i ? { ...item, stockQuantity: isNaN(v) ? 0 : Math.max(0, v) } : item
-                                        ));
-                                      }}
-                                    />
-                                  </td>
-                                  <td className="px-3 py-2">
-                                    <button
-                                      type="button"
-                                      className="text-red-500 hover:text-red-700 text-xs"
-                                      onClick={() => setBlouseSizes(prev => prev.filter((_, idx) => idx !== i))}
-                                    >
-                                      Remove
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
                   )}
 
                   {/* Product Name */}

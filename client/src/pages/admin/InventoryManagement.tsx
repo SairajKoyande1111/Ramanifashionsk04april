@@ -59,6 +59,8 @@ export default function InventoryManagement() {
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
   const [editBlouseSizes, setEditBlouseSizes] = useState<Array<{ size: string; stockQuantity: number }>>([]);
+  const [editNewSizeInput, setEditNewSizeInput] = useState("");
+  const [editNewSizeStock, setEditNewSizeStock] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -316,8 +318,13 @@ export default function InventoryManagement() {
       setEditingProduct(fullProduct);
       setEditingVariantIndex(vIdx);
       setUploadedImages(images);
-      if (fullProduct.category === "BLOUSES" && Array.isArray(fullProduct.blouseSizes)) {
-        setEditBlouseSizes(fullProduct.blouseSizes);
+      setEditNewSizeInput("");
+      setEditNewSizeStock(0);
+      if (fullProduct.category === "BLOUSES") {
+        const variantBlouseSizes = activeVariant?.blouseSizes?.length
+          ? activeVariant.blouseSizes
+          : (Array.isArray(fullProduct.blouseSizes) ? fullProduct.blouseSizes : []);
+        setEditBlouseSizes(variantBlouseSizes);
       } else {
         setEditBlouseSizes([]);
       }
@@ -410,16 +417,27 @@ export default function InventoryManagement() {
       }];
     }
 
-    // Compute product-level stockQuantity as the sum of all variant stock
-    const totalVariantStock = colorVariants.reduce((sum: number, v: any) => sum + (v.stockQuantity || 0), 0);
     const isBlouseCategory = productForm.category === "BLOUSES";
-    const blouseSizeStock = isBlouseCategory && editBlouseSizes.length > 0
-      ? editBlouseSizes.reduce((sum, s) => sum + (s.stockQuantity || 0), 0)
-      : 0;
-    const productLevelStock = isBlouseCategory && editBlouseSizes.length > 0
-      ? blouseSizeStock
-      : colorVariants.length > 0 ? totalVariantStock : newStockQty;
-    
+
+    // For blouses: inject per-variant blouseSizes and recompute variant stockQuantity
+    if (isBlouseCategory && editingVariantIndex >= 0 && colorVariants[editingVariantIndex]) {
+      const variantSizeStock = editBlouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
+      colorVariants = colorVariants.map((v: any, i: number) => {
+        if (i === editingVariantIndex) {
+          return {
+            ...v,
+            blouseSizes: editBlouseSizes,
+            stockQuantity: variantSizeStock,
+            inStock: variantSizeStock > 0,
+          };
+        }
+        return v;
+      });
+    }
+
+    const totalVariantStock = colorVariants.reduce((sum: number, v: any) => sum + (v.stockQuantity || 0), 0);
+    const productLevelStock = colorVariants.length > 0 ? totalVariantStock : newStockQty;
+
     const formattedData = {
       name: productForm.name,
       description: productForm.description,
@@ -430,7 +448,7 @@ export default function InventoryManagement() {
       fabric: productForm.fabric || undefined,
       color: productForm.color || undefined,
       colorVariants: colorVariants,
-      blouseSizes: isBlouseCategory ? editBlouseSizes : [],
+      blouseSizes: [],
       occasion: productForm.occasion || undefined,
       pattern: productForm.pattern || undefined,
       workType: productForm.workType || undefined,
@@ -479,17 +497,36 @@ export default function InventoryManagement() {
     const expanded: any[] = [];
     filtered.forEach((product: any) => {
       if (product.colorVariants && product.colorVariants.length > 0) {
-        product.colorVariants.forEach((variant: any, index: number) => {
-          expanded.push({
-            ...product,
-            variantColor: variant.color,
-            variantIndex: index,
-            stockQuantity: variant.stockQuantity ?? product.stockQuantity ?? 0,
-            inStock: variant.inStock !== undefined ? variant.inStock : ((variant.stockQuantity ?? 0) > 0),
-          });
+        product.colorVariants.forEach((variant: any, vIndex: number) => {
+          const isBlouse = product.category === "BLOUSES";
+          const variantBlouseSizes: any[] = variant.blouseSizes?.length
+            ? variant.blouseSizes
+            : (isBlouse && Array.isArray(product.blouseSizes) && product.blouseSizes.length > 0 ? product.blouseSizes : []);
+
+          if (isBlouse && variantBlouseSizes.length > 0) {
+            variantBlouseSizes.forEach((sizeEntry: any) => {
+              expanded.push({
+                ...product,
+                variantColor: variant.color,
+                variantIndex: vIndex,
+                variantSize: sizeEntry.size,
+                stockQuantity: sizeEntry.stockQuantity ?? 0,
+                inStock: (sizeEntry.stockQuantity ?? 0) > 0,
+              });
+            });
+          } else {
+            expanded.push({
+              ...product,
+              variantColor: variant.color,
+              variantIndex: vIndex,
+              variantSize: null,
+              stockQuantity: variant.stockQuantity ?? product.stockQuantity ?? 0,
+              inStock: variant.inStock !== undefined ? variant.inStock : ((variant.stockQuantity ?? 0) > 0),
+            });
+          }
         });
       } else {
-        expanded.push({ ...product });
+        expanded.push({ ...product, variantSize: null });
       }
     });
 
@@ -846,6 +883,7 @@ export default function InventoryManagement() {
                   <TableRow>
                     <TableHead data-testid="header-product-name">Product Name</TableHead>
                     <TableHead data-testid="header-color">Color</TableHead>
+                    <TableHead data-testid="header-size">Size</TableHead>
                     <TableHead data-testid="header-category">Category</TableHead>
                     <TableHead data-testid="header-price">Price</TableHead>
                     <TableHead data-testid="header-current-stock">Current Stock</TableHead>
@@ -859,7 +897,9 @@ export default function InventoryManagement() {
                     const isLowStock = stockQuantity < 10 && stockQuantity > 0;
                     const isOutOfStock = !product.inStock || stockQuantity === 0;
                     const rowKey = product.variantColor
-                      ? `${product._id}_${product.variantIndex}`
+                      ? (product.variantSize
+                          ? `${product._id}_${product.variantIndex}_${product.variantSize}`
+                          : `${product._id}_${product.variantIndex}`)
                       : product._id;
 
                     return (
@@ -871,6 +911,15 @@ export default function InventoryManagement() {
                           {product.variantColor ? (
                             <span className="inline-block text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
                               {product.variantColor}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell data-testid={`cell-size-${rowKey}`}>
+                          {product.variantSize ? (
+                            <span className="inline-block text-xs bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300 px-2 py-0.5 rounded-full font-medium">
+                              {product.variantSize}
                             </span>
                           ) : (
                             <span className="text-muted-foreground text-xs">—</span>
@@ -1098,16 +1147,26 @@ export default function InventoryManagement() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-stockQuantity" data-testid="label-edit-stock-quantity">Stock Quantity</Label>
-                <Input
-                  id="edit-stockQuantity"
-                  type="number"
-                  value={productForm.stockQuantity}
-                  onChange={(e) => setProductForm({...productForm, stockQuantity: e.target.value})}
-                  data-testid="input-edit-stock-quantity"
-                />
-              </div>
+              {productForm.category !== "BLOUSES" && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-stockQuantity" data-testid="label-edit-stock-quantity">Stock Quantity</Label>
+                  <Input
+                    id="edit-stockQuantity"
+                    type="number"
+                    value={productForm.stockQuantity}
+                    onChange={(e) => setProductForm({...productForm, stockQuantity: e.target.value})}
+                    data-testid="input-edit-stock-quantity"
+                  />
+                </div>
+              )}
+              {productForm.category === "BLOUSES" && (
+                <div className="space-y-2">
+                  <Label>Stock Quantity (auto-computed from sizes)</Label>
+                  <div className="h-10 px-3 flex items-center rounded-md border bg-muted text-muted-foreground text-sm">
+                    {editBlouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0)}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1226,7 +1285,54 @@ export default function InventoryManagement() {
             {/* Blouse Sizes (only shown for BLOUSES category) */}
             {productForm.category === "BLOUSES" && (
               <div className="border rounded-xl p-4 space-y-3 bg-pink-50/40">
-                <h3 className="font-semibold text-sm text-pink-700">Blouse Sizes & Stock</h3>
+                <h3 className="font-semibold text-sm text-pink-700">Sizes & Stock for this Color Variant</h3>
+                <p className="text-xs text-muted-foreground">Edit each size's stock. Add or remove sizes as needed.</p>
+                <div className="flex gap-2 items-end flex-wrap">
+                  <div className="space-y-1 flex-1 min-w-[80px]">
+                    <Label className="text-xs">Size</Label>
+                    <Input
+                      placeholder="e.g. 32"
+                      value={editNewSizeInput}
+                      onChange={(e) => setEditNewSizeInput(e.target.value)}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1 flex-1 min-w-[80px]">
+                    <Label className="text-xs">Stock Qty</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={editNewSizeStock === 0 ? "" : editNewSizeStock}
+                      onChange={(e) => {
+                        const v = Math.floor(Number(e.target.value));
+                        setEditNewSizeStock(isNaN(v) ? 0 : Math.max(0, v));
+                      }}
+                      className="h-8"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => {
+                      const trimmed = editNewSizeInput.trim();
+                      if (!trimmed) {
+                        toast({ title: "Enter a size", variant: "destructive" });
+                        return;
+                      }
+                      if (editBlouseSizes.some(s => s.size === trimmed)) {
+                        toast({ title: "Size already exists", variant: "destructive" });
+                        return;
+                      }
+                      setEditBlouseSizes(prev => [...prev, { size: trimmed, stockQuantity: editNewSizeStock }]);
+                      setEditNewSizeInput("");
+                      setEditNewSizeStock(0);
+                    }}
+                  >
+                    Add Size
+                  </Button>
+                </div>
                 {editBlouseSizes.length > 0 ? (
                   <div className="border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
@@ -1234,6 +1340,7 @@ export default function InventoryManagement() {
                         <tr>
                           <th className="text-left px-3 py-2 font-medium">Size</th>
                           <th className="text-left px-3 py-2 font-medium">Stock</th>
+                          <th className="px-3 py-2"></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1255,13 +1362,25 @@ export default function InventoryManagement() {
                                 }}
                               />
                             </td>
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                className="text-red-500 hover:text-red-700 text-xs"
+                                onClick={() => setEditBlouseSizes(prev => prev.filter((_, idx) => idx !== i))}
+                              >
+                                Remove
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    <div className="px-3 py-2 bg-pink-50/60 text-xs text-pink-700 font-medium border-t">
+                      Total Stock: {editBlouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0)}
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">No blouse sizes configured for this product.</p>
+                  <p className="text-xs text-muted-foreground">No sizes configured yet. Add sizes above.</p>
                 )}
               </div>
             )}

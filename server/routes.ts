@@ -1018,9 +1018,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let availableStock: number;
-      if (selectedSize && (product as any).blouseSizes?.length > 0) {
-        // For blouse products with sizes, check size-specific stock
-        const sizeEntry = (product as any).blouseSizes.find((s: any) => s.size === selectedSize);
+      if (selectedSize && (product as any).category === 'BLOUSES') {
+        // For blouse products with sizes, check size-specific stock from the matched color variant first
+        const matchedVariant = selectedColor
+          ? (product as any).colorVariants?.find((v: any) => v.color === selectedColor)
+          : (product as any).colorVariants?.[0];
+        const variantBlouseSizes = matchedVariant?.blouseSizes?.length
+          ? matchedVariant.blouseSizes
+          : ((product as any).blouseSizes || []);
+        const sizeEntry = variantBlouseSizes.find((s: any) => s.size === selectedSize);
         availableStock = sizeEntry?.stockQuantity ?? 0;
       } else if (selectedColor && (product as any).colorVariants?.length > 0) {
         const variant = (product as any).colorVariants.find((v: any) => v.color === selectedColor);
@@ -1389,8 +1395,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           // Check size-specific stock for blouse products
           let available: number;
-          if (item.selectedSize && (product as any).blouseSizes?.length > 0) {
-            const sizeEntry = (product as any).blouseSizes.find((s: any) => s.size === item.selectedSize);
+          if (item.selectedSize && (product as any).category === 'BLOUSES') {
+            const matchedVariant = item.selectedColor
+              ? (product as any).colorVariants?.find((v: any) => v.color === item.selectedColor)
+              : (product as any).colorVariants?.[0];
+            const variantBlouseSizes = matchedVariant?.blouseSizes?.length
+              ? matchedVariant.blouseSizes
+              : ((product as any).blouseSizes || []);
+            const sizeEntry = variantBlouseSizes.find((s: any) => s.size === item.selectedSize);
             available = sizeEntry?.stockQuantity ?? 0;
           } else if (item.selectedColor && (product as any).colorVariants?.length > 0) {
             const variant = (product as any).colorVariants.find((v: any) => v.color === item.selectedColor);
@@ -1427,19 +1439,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
               (product as any).updatedAt = new Date();
 
               // Deduct from blouse size stock if a size was selected
-              if (item.selectedSize && (product as any).blouseSizes?.length > 0) {
-                const sizeEntry = (product as any).blouseSizes.find(
-                  (s: any) => s.size === item.selectedSize
-                );
-                if (sizeEntry) {
-                  sizeEntry.stockQuantity = Math.max(0, (sizeEntry.stockQuantity || 0) - item.quantity);
+              if (item.selectedSize && (product as any).category === 'BLOUSES') {
+                const matchedVariant = item.selectedColor
+                  ? (product as any).colorVariants?.find((v: any) => v.color === item.selectedColor)
+                  : (product as any).colorVariants?.[0];
+                if (matchedVariant?.blouseSizes?.length) {
+                  const sizeEntry = matchedVariant.blouseSizes.find((s: any) => s.size === item.selectedSize);
+                  if (sizeEntry) {
+                    sizeEntry.stockQuantity = Math.max(0, (sizeEntry.stockQuantity || 0) - item.quantity);
+                  }
+                  const variantTotalStock = matchedVariant.blouseSizes.reduce(
+                    (sum: number, s: any) => sum + (s.stockQuantity || 0), 0
+                  );
+                  matchedVariant.stockQuantity = variantTotalStock;
+                  matchedVariant.inStock = variantTotalStock > 0;
+                } else if ((product as any).blouseSizes?.length > 0) {
+                  // fallback: global blouseSizes (legacy)
+                  const sizeEntry = (product as any).blouseSizes.find((s: any) => s.size === item.selectedSize);
+                  if (sizeEntry) {
+                    sizeEntry.stockQuantity = Math.max(0, (sizeEntry.stockQuantity || 0) - item.quantity);
+                  }
+                  const totalSizeStock = (product as any).blouseSizes.reduce(
+                    (sum: number, s: any) => sum + (s.stockQuantity || 0), 0
+                  );
+                  (product as any).stockQuantity = totalSizeStock;
+                  (product as any).inStock = totalSizeStock > 0;
                 }
-                // Recalculate product-level stock as sum of all size stocks
-                const totalSizeStock = (product as any).blouseSizes.reduce(
-                  (sum: number, s: any) => sum + (s.stockQuantity || 0), 0
-                );
-                (product as any).stockQuantity = totalSizeStock;
-                (product as any).inStock = totalSizeStock > 0;
+                // Recalculate product-level stock from all color variants
+                if ((product as any).colorVariants?.length > 0) {
+                  const totalVariantStock = (product as any).colorVariants.reduce(
+                    (sum: number, v: any) => sum + (v.stockQuantity || 0), 0
+                  );
+                  (product as any).stockQuantity = totalVariantStock;
+                  (product as any).inStock = totalVariantStock > 0;
+                }
               } else if ((product as any).colorVariants?.length > 0) {
                 // Deduct from the specific color variant
                 if (item.selectedColor) {
@@ -3370,33 +3403,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const product = await Product.findById(item.productId);
           if (product) {
-            // Restore top-level stockQuantity
-            const newQty = ((product as any).stockQuantity || 0) + item.quantity;
-            (product as any).stockQuantity = newQty;
-            (product as any).inStock = newQty > 0;
             (product as any).updatedAt = new Date();
 
-            // Also restore the specific color variant if applicable
-            if (item.selectedColor && (product as any).colorVariants?.length > 0) {
-              const variant = (product as any).colorVariants.find(
-                (v: any) => v.color === item.selectedColor
-              );
+            if (item.selectedSize && (product as any).category === 'BLOUSES') {
+              // Restore per-variant blouseSize stock
+              const matchedVariant = item.selectedColor
+                ? (product as any).colorVariants?.find((v: any) => v.color === item.selectedColor)
+                : (product as any).colorVariants?.[0];
+              if (matchedVariant?.blouseSizes?.length) {
+                const sizeEntry = matchedVariant.blouseSizes.find((s: any) => s.size === item.selectedSize);
+                if (sizeEntry) {
+                  sizeEntry.stockQuantity = (sizeEntry.stockQuantity || 0) + item.quantity;
+                }
+                const variantTotalStock = matchedVariant.blouseSizes.reduce(
+                  (sum: number, s: any) => sum + (s.stockQuantity || 0), 0
+                );
+                matchedVariant.stockQuantity = variantTotalStock;
+                matchedVariant.inStock = variantTotalStock > 0;
+              } else if ((product as any).blouseSizes?.length > 0) {
+                // fallback: global blouseSizes (legacy)
+                const sizeEntry = (product as any).blouseSizes.find((s: any) => s.size === item.selectedSize);
+                if (sizeEntry) sizeEntry.stockQuantity = (sizeEntry.stockQuantity || 0) + item.quantity;
+              }
+              // Recalculate product-level stock from all color variants
+              if ((product as any).colorVariants?.length > 0) {
+                const totalVariantStock = (product as any).colorVariants.reduce(
+                  (sum: number, v: any) => sum + (v.stockQuantity || 0), 0
+                );
+                (product as any).stockQuantity = totalVariantStock;
+                (product as any).inStock = totalVariantStock > 0;
+              }
+            } else if ((product as any).colorVariants?.length > 0) {
+              // Restore the specific color variant
+              const variant = item.selectedColor
+                ? (product as any).colorVariants.find((v: any) => v.color === item.selectedColor)
+                : null;
               if (variant) {
                 variant.stockQuantity = (variant.stockQuantity || 0) + item.quantity;
                 variant.inStock = variant.stockQuantity > 0;
               } else {
-                // Fallback: restore all variants
                 for (const v of (product as any).colorVariants) {
                   v.stockQuantity = (v.stockQuantity || 0) + item.quantity;
                   v.inStock = v.stockQuantity > 0;
                 }
               }
-            } else if ((product as any).colorVariants?.length > 0) {
-              // No color selected — restore all variants
-              for (const v of (product as any).colorVariants) {
-                v.stockQuantity = (v.stockQuantity || 0) + item.quantity;
-                v.inStock = v.stockQuantity > 0;
-              }
+              const totalVariantStock = (product as any).colorVariants.reduce(
+                (sum: number, v: any) => sum + (v.stockQuantity || 0), 0
+              );
+              (product as any).stockQuantity = totalVariantStock;
+              (product as any).inStock = totalVariantStock > 0;
+            } else {
+              const newQty = ((product as any).stockQuantity || 0) + item.quantity;
+              (product as any).stockQuantity = newQty;
+              (product as any).inStock = newQty > 0;
             }
 
             await product.save();
