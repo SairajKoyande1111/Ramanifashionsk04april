@@ -147,7 +147,8 @@ const cartSchema = new Schema({
   items: [{
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     quantity: { type: Number, required: true, default: 1 },
-    selectedColor: { type: String },
+    selectedColor: { type: String, default: null },
+    selectedSize: { type: String, default: null },
     addedAt: { type: Date, default: Date.now },
   }],
   updatedAt: { type: Date, default: Date.now },
@@ -174,6 +175,7 @@ const orderSchema = new Schema({
     quantity: { type: Number, required: true },
     image: { type: String },
     selectedColor: { type: String, default: null },
+    selectedSize: { type: String, default: null },
   }],
   shippingAddress: {
     fullName: String,

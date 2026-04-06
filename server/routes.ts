@@ -1009,7 +1009,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/cart", authenticateToken, async (req, res) => {
     try {
-      const { productId, quantity = 1, selectedColor } = req.body;
+      const { productId, quantity = 1, selectedColor, selectedSize } = req.body;
       const userId = (req as any).user.userId;
 
       const product = await Product.findById(productId).lean();
@@ -1018,7 +1018,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       let availableStock: number;
-      if (selectedColor && (product as any).colorVariants?.length > 0) {
+      if (selectedSize && (product as any).blouseSizes?.length > 0) {
+        // For blouse products with sizes, check size-specific stock
+        const sizeEntry = (product as any).blouseSizes.find((s: any) => s.size === selectedSize);
+        availableStock = sizeEntry?.stockQuantity ?? 0;
+      } else if (selectedColor && (product as any).colorVariants?.length > 0) {
         const variant = (product as any).colorVariants.find((v: any) => v.color === selectedColor);
         availableStock = variant?.stockQuantity ?? 0;
       } else {
@@ -1034,8 +1038,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingItem = cart.items.find(
         (item: any) => {
           const productMatch = item.productId.toString() === productId;
-          const colorMatch = (item.selectedColor || undefined) === (selectedColor || undefined);
-          return productMatch && colorMatch;
+          const colorMatch = (item.selectedColor || null) === (selectedColor || null);
+          const sizeMatch = (item.selectedSize || null) === (selectedSize || null);
+          return productMatch && colorMatch && sizeMatch;
         }
       );
 
@@ -1052,7 +1057,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingItem) {
         (existingItem as any).quantity = newQty;
       } else {
-        cart.items.push({ productId, quantity, selectedColor } as any);
+        cart.items.push({ productId, quantity, selectedColor: selectedColor || null, selectedSize: selectedSize || null } as any);
       }
 
       cart.updatedAt = new Date();
@@ -1382,17 +1387,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!product) {
             return res.status(400).json({ error: `Product not found: ${item.productId}` });
           }
-          // Check variant-specific stock when a color is selected
+          // Check size-specific stock for blouse products
           let available: number;
-          if (item.selectedColor && (product as any).colorVariants?.length > 0) {
+          if (item.selectedSize && (product as any).blouseSizes?.length > 0) {
+            const sizeEntry = (product as any).blouseSizes.find((s: any) => s.size === item.selectedSize);
+            available = sizeEntry?.stockQuantity ?? 0;
+          } else if (item.selectedColor && (product as any).colorVariants?.length > 0) {
             const variant = (product as any).colorVariants.find((v: any) => v.color === item.selectedColor);
             available = variant?.stockQuantity ?? 0;
           } else {
             available = (product as any).stockQuantity ?? 0;
           }
           if (item.quantity > available) {
+            const sizeLabel = item.selectedSize ? ` (Size ${item.selectedSize})` : '';
             return res.status(400).json({
-              error: `Only ${available} unit(s) available for "${(product as any).name}". Please update your cart.`,
+              error: `Only ${available} unit(s) available for "${(product as any).name}"${sizeLabel}. Please update your cart.`,
               availableStock: available,
               productName: (product as any).name,
             });
@@ -1417,7 +1426,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (product) {
               (product as any).updatedAt = new Date();
 
-              if ((product as any).colorVariants?.length > 0) {
+              // Deduct from blouse size stock if a size was selected
+              if (item.selectedSize && (product as any).blouseSizes?.length > 0) {
+                const sizeEntry = (product as any).blouseSizes.find(
+                  (s: any) => s.size === item.selectedSize
+                );
+                if (sizeEntry) {
+                  sizeEntry.stockQuantity = Math.max(0, (sizeEntry.stockQuantity || 0) - item.quantity);
+                }
+                // Recalculate product-level stock as sum of all size stocks
+                const totalSizeStock = (product as any).blouseSizes.reduce(
+                  (sum: number, s: any) => sum + (s.stockQuantity || 0), 0
+                );
+                (product as any).stockQuantity = totalSizeStock;
+                (product as any).inStock = totalSizeStock > 0;
+              } else if ((product as any).colorVariants?.length > 0) {
                 // Deduct from the specific color variant
                 if (item.selectedColor) {
                   const variant = (product as any).colorVariants.find(
@@ -1427,13 +1450,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     variant.stockQuantity = Math.max(0, (variant.stockQuantity || 0) - item.quantity);
                     variant.inStock = variant.stockQuantity > 0;
                   } else {
-                    // Fallback: deduct from first variant
                     const firstVariant = (product as any).colorVariants[0];
                     firstVariant.stockQuantity = Math.max(0, (firstVariant.stockQuantity || 0) - item.quantity);
                     firstVariant.inStock = firstVariant.stockQuantity > 0;
                   }
                 } else {
-                  // No color selected — deduct from first variant as fallback
                   const firstVariant = (product as any).colorVariants[0];
                   firstVariant.stockQuantity = Math.max(0, (firstVariant.stockQuantity || 0) - item.quantity);
                   firstVariant.inStock = firstVariant.stockQuantity > 0;
