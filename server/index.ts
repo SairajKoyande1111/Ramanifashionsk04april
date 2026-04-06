@@ -33,7 +33,7 @@ app.use((req, res, next) => {
       "media-src 'self' data: blob:",
       "connect-src 'self' https://api.phonepe.com https://mercury.phonepe.com https://mercury-t2.phonepe.com https://fonts.googleapis.com wss: https:",
       "worker-src 'self' blob: data: https://mercury-t2.phonepe.com",
-      "frame-src https://api.phonepe.com https://mercury.phonepe.com https://mercury-t2.phonepe.com https://www.youtube.com"
+      "frame-src https://api.phonepe.com https://mercury.phonepe.com https://mercury-t2.phonepe.com https://www.youtube.com https://maps.google.com https://www.google.com/maps"
     ].join('; ')
   );
   next();

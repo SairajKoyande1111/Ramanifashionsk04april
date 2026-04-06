@@ -321,8 +321,7 @@ export default function Home() {
                 className="flex gap-3 md:gap-4 lg:gap-5 md:justify-between pb-4 px-2 md:px-0"
                 variants={staggerContainer}
                 initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
+                animate="visible"
               >
                 {newCategories
                   .filter((cat) => cat.name !== "Sale")
@@ -1129,7 +1128,7 @@ export default function Home() {
                   <CardContent className="p-0">
                     <div className="relative w-full h-[200px] rounded-t-lg overflow-hidden">
                       <iframe
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3749.6774857769634!2d73.7875!3d19.9975!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTnCsDU5JzUxLjAiTiA3M8KwNDcnMTUuMCJF!5e0!3m2!1sen!2sin!4v1234567890"
+                        src="https://maps.google.com/maps?q=Shop+A001+Shree+Laxman+CHS+Jaibai+School+Road+Katemanivali+Kalyan+East+421306+Maharashtra&output=embed"
                         width="100%"
                         height="100%"
                         style={{ border: 0 }}
@@ -1166,9 +1165,9 @@ export default function Home() {
                           className="text-sm text-foreground leading-relaxed"
                           data-testid="text-address"
                         >
-                          Shop No. 15, Ground Floor, Kalpataru Complex,
+                          Shop A001, Shree Laxman CHS, Jaibai School Road,
                           <br />
-                          Near City Mall, Nashik, Maharashtra 422001
+                          Katemanivali, Kalyan East - 421306
                         </p>
                       </div>
                     </div>
@@ -1218,31 +1217,6 @@ export default function Home() {
                         >
                           ramanifashion2024@gmail.com
                         </a>
-                      </div>
-                    </div>
-
-                    <div
-                      className="rounded-full p-4 flex items-center gap-4"
-                      style={{ backgroundColor: "rgba(250, 220, 235, 0.7)" }}
-                    >
-                      <div
-                        className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: "hsl(338, 78%, 62%)" }}
-                      >
-                        <Clock className="w-5 h-5 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-foreground mb-1">
-                          Store Hours
-                        </h3>
-                        <div className="text-sm text-foreground space-y-1">
-                          <p data-testid="text-hours-weekday">
-                            Mon-Sat: 10 AM - 9 PM
-                          </p>
-                          <p data-testid="text-hours-sunday">
-                            Sun: 11 AM - 8 PM
-                          </p>
-                        </div>
                       </div>
                     </div>
 
@@ -1300,11 +1274,11 @@ export default function Home() {
         href="https://chat.whatsapp.com/GqIsU9ZF2SJ9buuSKxGFWB"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 rounded-full shadow-lg hover:shadow-xl transition-all z-40 flex items-center justify-center"
+        className="fixed bottom-6 right-6 z-40 block"
         data-testid="button-whatsapp-floating"
         aria-label="Chat on WhatsApp"
       >
-        <img src={whatsappIconImg} alt="Chat on WhatsApp" className="w-14 h-14 object-contain" />
+        <img src={whatsappIconImg} alt="Chat on WhatsApp" className="w-14 h-14 object-contain drop-shadow-lg" />
       </a>
 
       <Dialog
