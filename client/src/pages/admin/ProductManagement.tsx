@@ -566,19 +566,8 @@ export default function ProductManagement() {
                   </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description" data-testid="label-description">Description *</Label>
-                <Textarea
-                  id="description"
-                  value={productForm.description}
-                  onChange={(e) => setProductForm({...productForm, description: e.target.value})}
-                  rows={3}
-                  data-testid="input-description"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="subDescription" data-testid="label-sub-description">Sub Description</Label>
-                <p className="text-xs text-muted-foreground">Short tagline shown below the product name on the detail page.</p>
+                <p className="text-xs text-muted-foreground">Short one-liner shown on the product card and below the product name.</p>
                 <Input
                   id="subDescription"
                   value={productForm.subDescription}
@@ -589,7 +578,7 @@ export default function ProductManagement() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="detailedDescription" data-testid="label-detailed-description">Detailed Product Description</Label>
+                <Label htmlFor="detailedDescription" data-testid="label-detailed-description">Detailed Description</Label>
                 <p className="text-xs text-muted-foreground">Full description shown in the "Product Description" section on the detail page.</p>
                 <Textarea
                   id="detailedDescription"

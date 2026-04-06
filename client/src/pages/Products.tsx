@@ -621,7 +621,7 @@ export default function Products() {
                           isNew={product.isNew}
                           isBestseller={product.isBestseller}
                           context="products"
-                          description={product.description}
+                          shortDescription={product.subDescription}
                         />
                       </motion.div>
                     );

@@ -500,8 +500,7 @@ export default function Home() {
                       reviewCount={product.reviewCount}
                       isNew={true}
                       isBestseller={product.isBestseller}
-                      shortDescription={product.shortDescription}
-                      description={product.description}
+                      shortDescription={product.subDescription}
                       onClick={() => setLocation(`/product/${product._id}`)}
                     />
                   </motion.div>
@@ -542,8 +541,7 @@ export default function Home() {
                     reviewCount={product.reviewCount}
                     isNew={true}
                     isBestseller={product.isBestseller}
-                    shortDescription={product.shortDescription}
-                    description={product.description}
+                    shortDescription={product.subDescription}
                     onClick={() => setLocation(`/product/${product._id}`)}
                   />
                 </motion.div>
@@ -642,8 +640,7 @@ export default function Home() {
                       rating={product.rating}
                       reviewCount={product.reviewCount}
                       isBestseller={product.isBestseller}
-                      shortDescription={product.shortDescription}
-                      description={product.description}
+                      shortDescription={product.subDescription}
                       onClick={() => setLocation(`/product/${product._id}`)}
                     />
                   </motion.div>
@@ -683,8 +680,7 @@ export default function Home() {
                     rating={product.rating}
                     reviewCount={product.reviewCount}
                     isBestseller={product.isBestseller}
-                    shortDescription={product.shortDescription}
-                    description={product.description}
+                    shortDescription={product.subDescription}
                     onClick={() => setLocation(`/product/${product._id}`)}
                   />
                 </motion.div>

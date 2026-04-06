@@ -497,7 +497,7 @@ export default function NewArrivals() {
                           isNew={product.isNew}
                           isBestseller={product.isBestseller}
                           context="new-arrivals"
-                          description={product.description}
+                          shortDescription={product.subDescription}
                         />
                       </motion.div>
                     );
