@@ -93,11 +93,11 @@ export default function Home() {
   }, []);
 
   const { data: newArrivalsData } = useQuery({
-    queryKey: ["/api/products?isNew=true&limit=6"],
+    queryKey: ["/api/products?isNew=true&limit=6&inStock=false"],
   });
 
   const { data: trendingData } = useQuery({
-    queryKey: ["/api/products?isTrending=true&limit=6"],
+    queryKey: ["/api/products?isTrending=true&limit=6&inStock=false"],
   });
 
   const { data: categoriesData } = useQuery<any[]>({
@@ -500,7 +500,7 @@ export default function Home() {
                       reviewCount={product.reviewCount}
                       isNew={true}
                       isBestseller={product.isBestseller}
-                      inStock={product.inStock !== false}
+                      inStock={product.variantInStock !== undefined ? product.variantInStock !== false : product.inStock !== false}
                       shortDescription={product.subDescription}
                       onClick={() => setLocation(`/product/${product._id}`)}
                     />
@@ -542,7 +542,7 @@ export default function Home() {
                     reviewCount={product.reviewCount}
                     isNew={true}
                     isBestseller={product.isBestseller}
-                    inStock={product.inStock !== false}
+                    inStock={product.variantInStock !== undefined ? product.variantInStock !== false : product.inStock !== false}
                     shortDescription={product.subDescription}
                     onClick={() => setLocation(`/product/${product._id}`)}
                   />
@@ -642,7 +642,7 @@ export default function Home() {
                       rating={product.rating}
                       reviewCount={product.reviewCount}
                       isBestseller={product.isBestseller}
-                      inStock={product.inStock !== false}
+                      inStock={product.variantInStock !== undefined ? product.variantInStock !== false : product.inStock !== false}
                       shortDescription={product.subDescription}
                       onClick={() => setLocation(`/product/${product._id}`)}
                     />
@@ -683,7 +683,7 @@ export default function Home() {
                     rating={product.rating}
                     reviewCount={product.reviewCount}
                     isBestseller={product.isBestseller}
-                    inStock={product.inStock !== false}
+                    inStock={product.variantInStock !== undefined ? product.variantInStock !== false : product.inStock !== false}
                     shortDescription={product.subDescription}
                     onClick={() => setLocation(`/product/${product._id}`)}
                   />

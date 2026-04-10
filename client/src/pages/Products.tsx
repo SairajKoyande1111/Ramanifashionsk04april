@@ -858,30 +858,33 @@ export default function Products() {
                   </CollapsibleContent>
                 </Collapsible> */}
 
-                <Collapsible open={openSections.includes("color")}>
-                  <CollapsibleTrigger 
-                    className="flex items-center justify-between w-full py-3 hover-elevate px-2 rounded-md"
-                    onClick={() => toggleSection("color")}
-                  >
-                    <span className="font-medium">Color</span>
-                    <ChevronDown className={`h-4 w-4 transition-transform ${openSections.includes("color") ? "rotate-180" : ""}`} />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-2">
-                    <div className="grid grid-cols-5 gap-3">
-                      {colors.map((color: string) => (
-                        <button
-                          key={color}
-                          className={`w-10 h-10 rounded-full border-2 hover-elevate ${
-                            selectedColors.includes(color) ? 'border-primary ring-2 ring-primary' : 'border-border'
-                          }`}
-                          style={{ backgroundColor: color.toLowerCase() }}
-                          onClick={() => toggleColor(color)}
-                          title={color}
-                        />
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                {productColors.length > 0 && (
+                  <Collapsible open={openSections.includes("color")}>
+                    <CollapsibleTrigger 
+                      className="flex items-center justify-between w-full py-3 hover-elevate px-2 rounded-md"
+                      onClick={() => toggleSection("color")}
+                    >
+                      <span className="font-medium">Color</span>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${openSections.includes("color") ? "rotate-180" : ""}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                      <div className="grid grid-cols-5 gap-3">
+                        {productColors.map((color: string) => (
+                          <button
+                            key={color}
+                            className={`w-10 h-10 rounded-full border-2 hover-elevate ${
+                              selectedColors.includes(color) ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-border'
+                            }`}
+                            style={{ backgroundColor: getColorCssValue(color) }}
+                            onClick={() => toggleColor(color)}
+                            title={color}
+                            data-testid={`button-mobile-color-${color.toLowerCase().replace(/\s+/g, '-')}`}
+                          />
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
               </div>
             </SheetContent>
           </Sheet>
