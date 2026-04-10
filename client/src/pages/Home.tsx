@@ -318,7 +318,7 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-1 md:px-2">
             <div className="overflow-x-auto scrollbar-hide md:overflow-visible">
               <motion.div
-                className="flex gap-3 md:gap-4 lg:gap-5 md:justify-between pb-4 px-2 md:px-0"
+                className="flex gap-6 md:gap-8 lg:gap-10 pb-4 px-2 md:px-0"
                 variants={staggerContainer}
                 initial="hidden"
                 animate="visible"
@@ -500,6 +500,7 @@ export default function Home() {
                       reviewCount={product.reviewCount}
                       isNew={true}
                       isBestseller={product.isBestseller}
+                      inStock={product.inStock !== false}
                       shortDescription={product.subDescription}
                       onClick={() => setLocation(`/product/${product._id}`)}
                     />
@@ -541,6 +542,7 @@ export default function Home() {
                     reviewCount={product.reviewCount}
                     isNew={true}
                     isBestseller={product.isBestseller}
+                    inStock={product.inStock !== false}
                     shortDescription={product.subDescription}
                     onClick={() => setLocation(`/product/${product._id}`)}
                   />
@@ -640,6 +642,7 @@ export default function Home() {
                       rating={product.rating}
                       reviewCount={product.reviewCount}
                       isBestseller={product.isBestseller}
+                      inStock={product.inStock !== false}
                       shortDescription={product.subDescription}
                       onClick={() => setLocation(`/product/${product._id}`)}
                     />
@@ -680,6 +683,7 @@ export default function Home() {
                     rating={product.rating}
                     reviewCount={product.reviewCount}
                     isBestseller={product.isBestseller}
+                    inStock={product.inStock !== false}
                     shortDescription={product.subDescription}
                     onClick={() => setLocation(`/product/${product._id}`)}
                   />

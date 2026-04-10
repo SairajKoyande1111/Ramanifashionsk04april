@@ -34,6 +34,7 @@ interface ProductCardProps {
   reviewCount?: number;
   isNew?: boolean;
   isBestseller?: boolean;
+  inStock?: boolean;
   context?: 'new-arrivals' | 'trending' | 'sale' | 'products';
   shortDescription?: string;
   description?: string;
@@ -57,6 +58,7 @@ export default function ProductCard({
   reviewCount = 0,
   isNew,
   isBestseller,
+  inStock = true,
   context,
   shortDescription,
   description,
@@ -251,27 +253,37 @@ export default function ProductCard({
           </div>
         )}
 
-        <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1.5">
-          <Button 
-            className="w-full bg-primary hover:bg-primary text-primary-foreground"
-            onClick={handleAddToCart}
-            data-testid={`button-add-to-cart-${id}`}
-            size="sm"
-          >
-            <ShoppingBag className="h-4 w-4 mr-2" />
-            Add to Cart
-          </Button>
-          <Button 
-            className="w-full"
-            variant="secondary"
-            onClick={handleBuyNow}
-            data-testid={`button-buy-now-${id}`}
-            size="sm"
-          >
-            <CreditCard className="h-4 w-4 mr-2" />
-            Buy Now
-          </Button>
-        </div>
+        {!inStock && (
+          <div className="absolute bottom-2 left-2 z-20">
+            <span className="bg-primary text-white text-xs font-semibold px-2.5 py-1 rounded-sm" data-testid={`badge-sold-out-${id}`}>
+              Sold Out
+            </span>
+          </div>
+        )}
+
+        {inStock && (
+          <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1.5">
+            <Button 
+              className="w-full bg-primary hover:bg-primary text-primary-foreground"
+              onClick={handleAddToCart}
+              data-testid={`button-add-to-cart-${id}`}
+              size="sm"
+            >
+              <ShoppingBag className="h-4 w-4 mr-2" />
+              Add to Cart
+            </Button>
+            <Button 
+              className="w-full"
+              variant="secondary"
+              onClick={handleBuyNow}
+              data-testid={`button-buy-now-${id}`}
+              size="sm"
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              Buy Now
+            </Button>
+          </div>
+        )}
       </div>
 
       <CardContent className="p-2 md:p-3 flex flex-col flex-shrink-0" style={{ minHeight: '100px' }}>

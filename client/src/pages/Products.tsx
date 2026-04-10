@@ -745,11 +745,11 @@ export default function Products() {
               </Button>
             </SheetTrigger>
             <SheetContent side="bottom" className="h-[80vh] overflow-y-auto">
-              <SheetHeader className="mb-4">
+              <SheetHeader className="mb-4 pr-8">
                 <div className="flex items-center justify-between">
                   <SheetTitle>Filters</SheetTitle>
                   {activeFiltersCount > 0 && (
-                    <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+                    <Button variant="ghost" size="sm" onClick={clearAllFilters} className="mr-6">
                       Clear All
                     </Button>
                   )}
@@ -858,8 +858,7 @@ export default function Products() {
                   </CollapsibleContent>
                 </Collapsible> */}
 
-                {/* HIDDEN - Color Filter (Uncomment to re-enable) */}
-                {/* <Collapsible open={openSections.includes("color")}>
+                <Collapsible open={openSections.includes("color")}>
                   <CollapsibleTrigger 
                     className="flex items-center justify-between w-full py-3 hover-elevate px-2 rounded-md"
                     onClick={() => toggleSection("color")}
@@ -882,7 +881,7 @@ export default function Products() {
                       ))}
                     </div>
                   </CollapsibleContent>
-                </Collapsible> */}
+                </Collapsible>
               </div>
             </SheetContent>
           </Sheet>

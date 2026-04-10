@@ -65,8 +65,8 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
     },
     onSuccess: () => {
       toast({
-        title: "OTP Sent via WhatsApp",
-        description: `Verification code sent to +91 ${phoneNumber} on WhatsApp`,
+        title: "OTP Sent via SMS",
+        description: `Verification code sent to your registered mobile number +91 ${phoneNumber}`,
       });
       setStep("otp");
       setTimeout(() => otpInputRefs.current[0]?.focus(), 100);
