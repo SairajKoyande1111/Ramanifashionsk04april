@@ -254,6 +254,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = req.query;
 
       const query: any = {};
+      const addAndCondition = (condition: any) => {
+        if (!query.$and) query.$and = [];
+        query.$and.push(condition);
+      };
 
       // mainCategory: filter by parent category, matching both new (category=SAREES) and legacy (category=subcategory name) products
       if (mainCategory) {
@@ -293,9 +297,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (inStock === 'false') { /* show all */ } else { query.inStock = true; }
-      if (req.query.isNew === 'true') query.$or = [{ isNew: true }, { 'colorVariants.isNew': true }];
-      if (req.query.isBestseller === 'true') query.$or = [{ isBestseller: true }, { 'colorVariants.isBestseller': true }];
-      if (req.query.isTrending === 'true') query.$or = [{ isTrending: true }, { 'colorVariants.isTrending': true }];
+      if (req.query.isNew === 'true') addAndCondition({ $or: [{ 'colorVariants.isNew': true }, { category: 'JEWELLERY', isNew: true }] });
+      if (req.query.isBestseller === 'true') addAndCondition({ $or: [{ 'colorVariants.isBestseller': true }, { category: 'JEWELLERY', isBestseller: true }] });
+      if (req.query.isTrending === 'true') addAndCondition({ $or: [{ 'colorVariants.isTrending': true }, { category: 'JEWELLERY', isTrending: true }] });
       
       // Filter for sale products
       if (onSale === 'true') {
@@ -376,9 +380,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let variants = product.colorVariants;
             if (flagFilter) {
               const filtered = variants.filter((v: any) =>
-                v[flagFilter] === true || (v[flagFilter] === undefined && product[flagFilter] === true)
+                v[flagFilter] === true
               );
-              if (filtered.length > 0) variants = filtered;
+              if (filtered.length > 0 || product.category !== 'JEWELLERY' || product[flagFilter] !== true) variants = filtered;
             }
             return variants.map((variant: any) => {
               const variantIndex = product.colorVariants.indexOf(variant);
@@ -391,9 +395,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 displayImages: variant.images && variant.images.length > 0 ? variant.images : product.images,
                 variantStockQuantity: variant.stockQuantity,
                 variantInStock: variant.inStock,
-                isNew: variant.isNew !== undefined ? variant.isNew : product.isNew,
-                isBestseller: variant.isBestseller !== undefined ? variant.isBestseller : product.isBestseller,
-                isTrending: variant.isTrending !== undefined ? variant.isTrending : product.isTrending,
+                isNew: variant.isNew === true || (product.category === 'JEWELLERY' && product.isNew === true),
+                isBestseller: variant.isBestseller === true || (product.category === 'JEWELLERY' && product.isBestseller === true),
+                isTrending: variant.isTrending === true || (product.category === 'JEWELLERY' && product.isTrending === true),
               };
             });
           }
@@ -451,9 +455,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let variants = product.colorVariants;
             if (flagFilter2) {
               const filtered = variants.filter((v: any) =>
-                v[flagFilter2] === true || (v[flagFilter2] === undefined && product[flagFilter2] === true)
+                v[flagFilter2] === true
               );
-              if (filtered.length > 0) variants = filtered;
+              if (filtered.length > 0 || product.category !== 'JEWELLERY' || product[flagFilter2] !== true) variants = filtered;
             }
             return variants.map((variant: any) => {
               const variantIndex = product.colorVariants.indexOf(variant);
@@ -466,9 +470,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 displayImages: variant.images && variant.images.length > 0 ? variant.images : product.images,
                 variantStockQuantity: variant.stockQuantity,
                 variantInStock: variant.inStock,
-                isNew: variant.isNew !== undefined ? variant.isNew : product.isNew,
-                isBestseller: variant.isBestseller !== undefined ? variant.isBestseller : product.isBestseller,
-                isTrending: variant.isTrending !== undefined ? variant.isTrending : product.isTrending,
+                isNew: variant.isNew === true || (product.category === 'JEWELLERY' && product.isNew === true),
+                isBestseller: variant.isBestseller === true || (product.category === 'JEWELLERY' && product.isBestseller === true),
+                isTrending: variant.isTrending === true || (product.category === 'JEWELLERY' && product.isTrending === true),
               };
             });
           }

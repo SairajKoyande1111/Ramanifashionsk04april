@@ -62,8 +62,9 @@ export function extractUniqueColorsFromProducts(products: any[]): string[] {
   products.forEach(product => {
     if (product.displayColor) {
       colorSet.add(product.displayColor);
+      return;
     }
-    if (product.colorVariants && Array.isArray(product.colorVariants)) {
+    if (!product.baseProductId && product.colorVariants && Array.isArray(product.colorVariants)) {
       product.colorVariants.forEach((variant: any) => {
         if (variant.color) {
           colorSet.add(variant.color);

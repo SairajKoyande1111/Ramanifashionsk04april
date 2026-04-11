@@ -466,7 +466,9 @@ export default function ProductDetail() {
             className="font-['Inter',sans-serif]"
           >
             <div className="flex gap-2 mb-2">
-              {product.isBestseller && (
+              {(currentColorVariant
+                ? currentColorVariant.isBestseller === true || (product.category === "JEWELLERY" && product.isBestseller === true)
+                : product.isBestseller) && (
                 <Badge variant="secondary" data-testid="badge-bestseller">
                   Bestseller
                 </Badge>

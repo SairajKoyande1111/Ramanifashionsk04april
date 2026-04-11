@@ -337,15 +337,6 @@ export default function ProductManagement() {
         return;
       }
 
-      const hasImages = colorVariants.some(variant => variant.images && variant.images.length > 0);
-      if ((productForm.isNew || productForm.isTrending) && !hasImages) {
-        toast({
-          title: "Images required for New/Trending products",
-          description: "Please add at least one image before marking a product as New Arrival or Trending",
-          variant: "destructive"
-        });
-        return;
-      }
     }
 
     let finalColorVariants: ColorVariant[];
@@ -388,9 +379,9 @@ export default function ProductManagement() {
       sareeLength: productForm.sareeLength || undefined,
       stockQuantity: totalStock,
       inStock: anyInStock,
-      isNew: productForm.isNew,
-      isTrending: productForm.isTrending,
-      isBestseller: productForm.isBestseller,
+      isNew: isJewellery ? productForm.isNew : false,
+      isTrending: isJewellery ? productForm.isTrending : false,
+      isBestseller: isJewellery ? productForm.isBestseller : false,
       onSale: productForm.onSale,
       specifications: productForm.category === "JEWELLERY"
         ? {
@@ -694,35 +685,39 @@ export default function ProductManagement() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="isNew"
-                    checked={productForm.isNew}
-                    onCheckedChange={(checked) => setProductForm({...productForm, isNew: checked as boolean})}
-                    data-testid="checkbox-is-new"
-                  />
-                  <Label htmlFor="isNew" data-testid="label-is-new">New Arrival <span className="text-xs text-muted-foreground">(all variants)</span></Label>
-                </div>
+                {productForm.category === "JEWELLERY" && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="isNew"
+                        checked={productForm.isNew}
+                        onCheckedChange={(checked) => setProductForm({...productForm, isNew: checked as boolean})}
+                        data-testid="checkbox-is-new"
+                      />
+                      <Label htmlFor="isNew" data-testid="label-is-new">New Arrival</Label>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="isTrending"
-                    checked={productForm.isTrending}
-                    onCheckedChange={(checked) => setProductForm({...productForm, isTrending: checked as boolean})}
-                    data-testid="checkbox-is-trending"
-                  />
-                  <Label htmlFor="isTrending" data-testid="label-is-trending">Trending <span className="text-xs text-muted-foreground">(all variants)</span></Label>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="isTrending"
+                        checked={productForm.isTrending}
+                        onCheckedChange={(checked) => setProductForm({...productForm, isTrending: checked as boolean})}
+                        data-testid="checkbox-is-trending"
+                      />
+                      <Label htmlFor="isTrending" data-testid="label-is-trending">Trending</Label>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="isBestseller"
-                    checked={productForm.isBestseller}
-                    onCheckedChange={(checked) => setProductForm({...productForm, isBestseller: checked as boolean})}
-                    data-testid="checkbox-is-bestseller"
-                  />
-                  <Label htmlFor="isBestseller" data-testid="label-is-bestseller">Bestseller <span className="text-xs text-muted-foreground">(all variants)</span></Label>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="isBestseller"
+                        checked={productForm.isBestseller}
+                        onCheckedChange={(checked) => setProductForm({...productForm, isBestseller: checked as boolean})}
+                        data-testid="checkbox-is-bestseller"
+                      />
+                      <Label htmlFor="isBestseller" data-testid="label-is-bestseller">Bestseller</Label>
+                    </div>
+                  </>
+                )}
 
                 <div className="flex items-center gap-2">
                   <Checkbox

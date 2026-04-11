@@ -156,10 +156,15 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
   };
 
   const handleAddOrUpdateVariant = () => {
-    if (!selectedColor) {
+    const colorName = selectedColor.trim();
+    const colorAlreadyExists = variants.some((v, index) =>
+      index !== editingIndex && v.color.trim().toLowerCase() === colorName.toLowerCase()
+    );
+
+    if (!colorName) {
       toast({ 
         title: "Color required", 
-        description: "Please select a color",
+        description: "Please select or type a color name",
         variant: "destructive" 
       });
       return;
@@ -215,7 +220,7 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       }
       const totalStock = blouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
       const variant: ColorVariant = {
-        color: selectedColor,
+        color: colorName,
         images: validImages,
         stockQuantity: totalStock,
         inStock: totalStock > 0,
@@ -231,7 +236,7 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
         toast({ title: "Color variant updated!" });
         setEditingIndex(null);
       } else {
-        if (variants.some(v => v.color === selectedColor)) {
+        if (colorAlreadyExists) {
           toast({ title: "Color already exists", description: "This color has already been added", variant: "destructive" });
           return;
         }
@@ -272,7 +277,7 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
     if (editingIndex !== null) {
       const updatedVariants = [...variants];
       updatedVariants[editingIndex] = { 
-        color: selectedColor, 
+        color: colorName, 
         images: validImages,
         stockQuantity: stockQuantity,
         inStock: finalInStock,
@@ -284,7 +289,7 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       toast({ title: "Color variant updated!" });
       setEditingIndex(null);
     } else {
-      if (variants.some(v => v.color === selectedColor)) {
+      if (colorAlreadyExists) {
         toast({ 
           title: "Color already exists", 
           description: "This color has already been added",
@@ -293,7 +298,7 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
         return;
       }
       onChange([...variants, { 
-        color: selectedColor, 
+        color: colorName, 
         images: validImages,
         stockQuantity: stockQuantity,
         inStock: finalInStock,
@@ -379,7 +384,7 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="color-select" data-testid="label-color-select">
-              Select Color *
+              Color *
             </Label>
             <Select 
               value={selectedColor} 
@@ -400,6 +405,13 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
                 ))}
               </SelectContent>
             </Select>
+            <Input
+              id="color-select"
+              value={selectedColor}
+              onChange={(e) => setSelectedColor(e.target.value)}
+              placeholder="Or type a custom color name"
+              data-testid="input-custom-color"
+            />
           </div>
 
           {isBlouse ? (
