@@ -320,10 +320,10 @@ export default function Home() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
         >
-          <div className="max-w-7xl mx-auto px-1 md:px-2">
-            <div className="overflow-x-auto scrollbar-hide md:overflow-visible">
+          <div className="max-w-7xl mx-auto">
+            <div className="overflow-x-auto scrollbar-hide">
               <motion.div
-                className="flex gap-6 md:gap-8 lg:gap-10 pb-4 px-2 md:px-0"
+                className="flex gap-6 md:gap-8 lg:gap-10 pb-4 px-6 md:px-10"
                 variants={staggerContainer}
                 initial="hidden"
                 animate="visible"
