@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -25,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Eye, LayoutGrid, List, Package, CheckCircle, XCircle, PackageCheck, Banknote } from "lucide-react";
+import { Search, Eye, Package, CheckCircle, XCircle, PackageCheck, Banknote, TrendingUp, Clock, Loader2, IndianRupee } from "lucide-react";
 
 interface Order {
   _id: string;
@@ -43,6 +44,8 @@ interface Order {
     price: number;
     quantity: number;
     image?: string;
+    selectedColor?: string;
+    selectedSize?: string;
   }>;
   shippingAddress: {
     fullName: string;
@@ -87,13 +90,33 @@ interface OrdersResponse {
   };
 }
 
+const getStatusColor = (status: string, type: 'order' | 'payment') => {
+  if (type === 'order') {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'approved': return 'bg-cyan-100 text-cyan-800';
+      case 'processing': return 'bg-blue-100 text-blue-800';
+      case 'shipped': return 'bg-purple-100 text-purple-800';
+      case 'delivered': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  } else {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'paid': return 'bg-green-100 text-green-800';
+      case 'failed': return 'bg-red-100 text-red-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }
+};
+
 export default function OrderManagement() {
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
   const adminToken = localStorage.getItem("adminToken");
 
-  // View mode and filters
-  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [searchQuery, setSearchQuery] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
@@ -103,19 +126,11 @@ export default function OrderManagement() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Order detail dialog
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-
-  // Image preview dialog
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [previewImageOpen, setPreviewImageOpen] = useState(false);
-
-  // Rejection reason state (shown inline)
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectionInput, setShowRejectionInput] = useState(false);
 
-  // Build query params
   const queryParams = useMemo(() => {
     const params = new URLSearchParams();
     if (searchQuery) params.append('search', searchQuery);
@@ -141,26 +156,15 @@ export default function OrderManagement() {
   });
 
   const approveOrderMutation = useMutation({
-    mutationFn: (orderId: string) => {
-      console.log('\n🚀 APPROVING ORDER (ONLY)');
-      console.log('Order ID:', orderId);
-      console.log('Timestamp:', new Date().toISOString());
-      return apiRequest(`/api/admin/orders/${orderId}/approve-only`, "POST");
-    },
-    onSuccess: (data) => {
-      console.log('✅ Order approved successfully!', data);
+    mutationFn: (orderId: string) =>
+      apiRequest(`/api/admin/orders/${orderId}/approve-only`, "POST"),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
-      toast({ 
-        title: "Order approved!", 
-        description: "You can now send it to a shipping partner." 
-      });
+      toast({ title: "Order approved!", description: "You can now send it to a shipping partner." });
       setDetailDialogOpen(false);
       setSelectedOrder(null);
     },
     onError: (error: any) => {
-      console.error('❌ Order approval failed:', error);
-      console.error('Error message:', error.message);
-      console.error('Full error:', JSON.stringify(error, null, 2));
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   });
@@ -180,7 +184,7 @@ export default function OrderManagement() {
   });
 
   const rejectOrderMutation = useMutation({
-    mutationFn: ({ orderId, reason }: { orderId: string; reason: string }) => 
+    mutationFn: ({ orderId, reason }: { orderId: string; reason: string }) =>
       apiRequest(`/api/admin/orders/${orderId}/reject`, "POST", { reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/orders'] });
@@ -215,12 +219,6 @@ export default function OrderManagement() {
     return order.paymentStatus;
   };
 
-  const getDisplayPaymentStatusColor = (order: Order): string => {
-    const status = getDisplayPaymentStatus(order);
-    if (status === 'cancelled') return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-    return getStatusColor(status, 'payment');
-  };
-
   const handleViewDetails = async (orderId: string) => {
     try {
       const order = await apiRequest(`/api/admin/orders/${orderId}`, "GET");
@@ -233,44 +231,14 @@ export default function OrderManagement() {
 
   const handleRejectOrder = () => {
     if (!selectedOrder || !rejectionReason.trim()) {
-      toast({ 
-        title: "Error", 
-        description: "Please provide a rejection reason", 
-        variant: "destructive" 
-      });
+      toast({ title: "Error", description: "Please provide a rejection reason", variant: "destructive" });
       return;
     }
-    rejectOrderMutation.mutate({ 
-      orderId: selectedOrder._id, 
-      reason: rejectionReason 
-    });
+    rejectOrderMutation.mutate({ orderId: selectedOrder._id, reason: rejectionReason });
   };
 
-  const getStatusColor = (status: string, type: 'order' | 'payment') => {
-    if (type === 'order') {
-      switch (status) {
-        case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-        case 'approved': return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200';
-        case 'processing': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-        case 'shipped': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-        case 'delivered': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-        case 'cancelled': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-        default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-      }
-    } else {
-      switch (status) {
-        case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-        case 'paid': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-        case 'failed': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-        default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-      }
-    }
-  };
-
-  // Calculate statistics
   const stats = useMemo(() => {
     if (!ordersData?.orders) return { total: 0, pending: 0, processing: 0, revenue: 0 };
-    
     const orders = ordersData.orders;
     return {
       total: ordersData.pagination.total,
@@ -287,451 +255,265 @@ export default function OrderManagement() {
 
   return (
     <AdminLayout>
-      <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
-            Order Management
-          </h1>
-          <p className="text-muted-foreground">
-            Track and manage all customer orders
-          </p>
+      <div className="p-6 space-y-6">
+
+        {/* Page Header */}
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Order Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">Track and manage all customer orders</p>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground" data-testid="text-total-orders-label">
-                Total Orders
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="text-total-orders">
-                {stats.total}
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <Package className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Total Orders</p>
+                <p className="text-xl font-bold" data-testid="text-total-orders">{stats.total}</p>
               </div>
             </CardContent>
           </Card>
-          
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground" data-testid="text-pending-orders-label">
-                Pending Orders
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600" data-testid="text-pending-orders">
-                {stats.pending}
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 bg-yellow-50 rounded-lg">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-xl font-bold text-yellow-600" data-testid="text-pending-orders">{stats.pending}</p>
               </div>
             </CardContent>
           </Card>
-          
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground" data-testid="text-processing-orders-label">
-                Processing
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600" data-testid="text-processing-orders">
-                {stats.processing}
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 bg-purple-50 rounded-lg">
+                <Loader2 className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Processing</p>
+                <p className="text-xl font-bold text-purple-600" data-testid="text-processing-orders">{stats.processing}</p>
               </div>
             </CardContent>
           </Card>
-          
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground" data-testid="text-revenue-label">
-                Total Revenue
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600" data-testid="text-revenue">
-                ₹{stats.revenue.toLocaleString()}
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="p-2 bg-green-50 rounded-lg">
+                <IndianRupee className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Revenue</p>
+                <p className="text-xl font-bold text-green-600" data-testid="text-revenue">₹{stats.revenue.toLocaleString()}</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Search & Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Search & Filter Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div>
-                <Label htmlFor="search">Search</Label>
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="search"
-                    data-testid="input-search"
-                    placeholder="Order #, customer name, email, phone..."
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="pl-8"
-                  />
-                </div>
+        {/* Filters */}
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  data-testid="input-search"
+                  placeholder="Order #, customer, email..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  className="pl-8"
+                />
               </div>
 
-              <div>
-                <Label htmlFor="sort">Sort By</Label>
-                <Select value={`${sortBy}-${sortOrder}`} onValueChange={(value) => {
-                  const [field, order] = value.split('-');
-                  setSortBy(field);
-                  setSortOrder(order);
-                  setCurrentPage(1);
-                }}>
-                  <SelectTrigger id="sort" data-testid="select-sort">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="createdAt-desc">Newest First</SelectItem>
-                    <SelectItem value="createdAt-asc">Oldest First</SelectItem>
-                    <SelectItem value="total-desc">Highest Amount</SelectItem>
-                    <SelectItem value="total-asc">Lowest Amount</SelectItem>
-                    <SelectItem value="orderNumber-asc">Order Number (A-Z)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={`${sortBy}-${sortOrder}`} onValueChange={(value) => {
+                const [field, order] = value.split('-');
+                setSortBy(field);
+                setSortOrder(order);
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger data-testid="select-sort">
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt-desc">Newest First</SelectItem>
+                  <SelectItem value="createdAt-asc">Oldest First</SelectItem>
+                  <SelectItem value="total-desc">Highest Amount</SelectItem>
+                  <SelectItem value="total-asc">Lowest Amount</SelectItem>
+                </SelectContent>
+              </Select>
 
-              <div>
-                <Label htmlFor="orderStatus">Order Status</Label>
-                <Select value={orderStatusFilter} onValueChange={(value) => {
-                  setOrderStatusFilter(value);
-                  setCurrentPage(1);
-                }}>
-                  <SelectTrigger id="orderStatus" data-testid="select-order-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
-                    <SelectItem value="shipped">Shipped</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={orderStatusFilter} onValueChange={(value) => { setOrderStatusFilter(value); setCurrentPage(1); }}>
+                <SelectTrigger data-testid="select-order-status">
+                  <SelectValue placeholder="Order Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="shipped">Shipped</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
 
-              <div>
-                <Label htmlFor="paymentStatus">Payment Status</Label>
-                <Select value={paymentStatusFilter} onValueChange={(value) => {
-                  setPaymentStatusFilter(value);
-                  setCurrentPage(1);
-                }}>
-                  <SelectTrigger id="paymentStatus" data-testid="select-payment-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Payment Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={paymentStatusFilter} onValueChange={(value) => { setPaymentStatusFilter(value); setCurrentPage(1); }}>
+                <SelectTrigger data-testid="select-payment-status">
+                  <SelectValue placeholder="Payment Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Payments</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="startDate">Start Date</Label>
+            <div className="flex flex-wrap gap-3 items-center">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground whitespace-nowrap">From:</Label>
                 <Input
-                  id="startDate"
                   data-testid="input-start-date"
                   type="date"
                   value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value);
-                    setCurrentPage(1);
-                  }}
+                  onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                  className="w-36 text-sm"
                 />
               </div>
-
-              <div>
-                <Label htmlFor="endDate">End Date</Label>
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground whitespace-nowrap">To:</Label>
                 <Input
-                  id="endDate"
                   data-testid="input-end-date"
                   type="date"
                   value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
-                    setCurrentPage(1);
-                  }}
+                  onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                  className="w-36 text-sm"
                 />
               </div>
-
-              <div className="flex items-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setOrderStatusFilter("all");
-                    setPaymentStatusFilter("all");
-                    setStartDate("");
-                    setEndDate("");
-                    setSortBy("createdAt");
-                    setSortOrder("desc");
-                    setCurrentPage(1);
-                  }}
-                  data-testid="button-clear-filters"
-                  className="flex-1"
-                >
-                  Clear Filters
-                </Button>
-                <div className="flex gap-1">
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
-                    size="icon"
-                    onClick={() => setViewMode('list')}
-                    data-testid="button-view-list"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'card' ? 'default' : 'outline'}
-                    size="icon"
-                    onClick={() => setViewMode('card')}
-                    data-testid="button-view-card"
-                  >
-                    <LayoutGrid className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery(""); setOrderStatusFilter("all"); setPaymentStatusFilter("all");
+                  setStartDate(""); setEndDate(""); setSortBy("createdAt"); setSortOrder("desc"); setCurrentPage(1);
+                }}
+                data-testid="button-clear-filters"
+              >
+                Clear Filters
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Orders Display */}
+        {/* Orders Table */}
         {isLoading ? (
           <Card>
-            <CardContent className="p-8">
-              <div className="text-center text-muted-foreground">Loading orders...</div>
+            <CardContent className="p-12 text-center text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 opacity-40" />
+              <p className="text-sm">Loading orders...</p>
             </CardContent>
           </Card>
         ) : !ordersData?.orders || ordersData.orders.length === 0 ? (
           <Card>
-            <CardContent className="p-8">
-              <div className="text-center text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No orders found matching your filters</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : viewMode === 'list' ? (
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Order Status</TableHead>
-                    <TableHead>Payment</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {ordersData.orders.map((order) => (
-                    <TableRow key={order._id} data-testid={`row-order-${order._id}`}>
-                      <TableCell className="font-medium" data-testid={`text-order-number-${order._id}`}>
-                        {order.orderNumber}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium" data-testid={`text-customer-name-${order._id}`}>
-                            {order.userId?.name || 'Unknown'}
-                          </span>
-                          <span className="text-xs text-muted-foreground" data-testid={`text-customer-email-${order._id}`}>
-                            {order.userId?.email || ''}
-                          </span>
-                          <span className="text-xs text-muted-foreground" data-testid={`text-customer-phone-${order._id}`}>
-                            {order.userId?.phone || ''}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell data-testid={`text-items-count-${order._id}`}>
-                        {order.items.length} item(s)
-                      </TableCell>
-                      <TableCell data-testid={`cell-product-${order._id}`}>
-                        <div className="space-y-1">
-                          <div className="font-bold text-sm" data-testid={`text-product-name-${order._id}`}>
-                            {order.items[0]?.name}
-                          </div>
-                          {order.items[0]?.description && (
-                            <div className="text-xs text-muted-foreground line-clamp-2" data-testid={`text-product-desc-${order._id}`}>
-                              {order.items[0].description}
-                            </div>
-                          )}
-                          {order.items[0]?.image && (
-                            <img 
-                              src={order.items[0].image} 
-                              alt={order.items[0].name}
-                              className="h-20 w-20 object-cover rounded-md cursor-pointer hover-elevate"
-                              onClick={() => {
-                                if (order.items[0]?.image) {
-                                  setPreviewImage(order.items[0].image);
-                                  setPreviewImageOpen(true);
-                                }
-                              }}
-                              data-testid={`img-product-${order._id}`}
-                            />
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-semibold" data-testid={`text-total-${order._id}`}>
-                        ₹{order.total.toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          className={getStatusColor(order.orderStatus, 'order')}
-                          data-testid={`badge-order-status-${order._id}`}
-                        >
-                          {order.orderStatus}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          className={getDisplayPaymentStatusColor(order)}
-                          data-testid={`badge-payment-status-${order._id}`}
-                        >
-                          {getDisplayPaymentStatus(order)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell data-testid={`text-date-${order._id}`}>
-                        {format(new Date(order.createdAt), 'dd MMM yyyy')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => handleViewDetails(order._id)}
-                          data-testid={`button-view-${order._id}`}
-                          title="View Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="p-12 text-center">
+              <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-40" />
+              <p className="text-sm text-muted-foreground">No orders found matching your filters</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {ordersData.orders.map((order) => (
-              <Card key={order._id} className="hover-elevate" data-testid={`card-order-${order._id}`}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg" data-testid={`text-card-order-number-${order._id}`}>
-                        {order.orderNumber}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground" data-testid={`text-card-date-${order._id}`}>
-                        {format(new Date(order.createdAt), 'dd MMM yyyy, HH:mm')}
-                      </p>
-                    </div>
-                    <Badge 
-                      className={getStatusColor(order.orderStatus, 'order')}
-                      data-testid={`badge-card-status-${order._id}`}
-                    >
-                      {order.orderStatus}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <div className="text-sm font-medium mb-1">Customer</div>
-                    <div className="text-sm space-y-0.5">
-                      <div className="font-medium" data-testid={`text-card-customer-${order._id}`}>
-                        {order.userId?.name || 'Unknown'}
-                      </div>
-                      <div className="text-muted-foreground text-xs">
-                        {order.userId?.email || ''}
-                      </div>
-                      <div className="text-muted-foreground text-xs">
-                        {order.userId?.phone || ''}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div>
-                      <div className="text-xs text-muted-foreground">Items</div>
-                      <div className="font-medium" data-testid={`text-card-items-${order._id}`}>
-                        {order.items.length}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Payment</div>
-                      <Badge 
-                        className={getDisplayPaymentStatusColor(order)}
-                        data-testid={`badge-card-payment-${order._id}`}
-                      >
-                        {getDisplayPaymentStatus(order)}
-                      </Badge>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs text-muted-foreground">Total</div>
-                      <div className="font-bold text-lg" data-testid={`text-card-total-${order._id}`}>
-                        ₹{order.total.toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => handleViewDetails(order._id)}
-                      data-testid={`button-card-view-${order._id}`}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View Details
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      <TableHead className="font-semibold pl-4">Order #</TableHead>
+                      <TableHead className="font-semibold">Customer</TableHead>
+                      <TableHead className="font-semibold text-center">Items</TableHead>
+                      <TableHead className="font-semibold">Amount</TableHead>
+                      <TableHead className="font-semibold">Order Status</TableHead>
+                      <TableHead className="font-semibold">Payment</TableHead>
+                      <TableHead className="font-semibold">Date</TableHead>
+                      <TableHead className="font-semibold text-center pr-4">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {ordersData.orders.map((order) => (
+                      <TableRow key={order._id} className="hover:bg-muted/30 align-middle" data-testid={`row-order-${order._id}`}>
+                        <TableCell className="pl-4 py-3">
+                          <span className="font-mono text-sm font-semibold" data-testid={`text-order-number-${order._id}`}>
+                            {order.orderNumber}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <div>
+                            <p className="font-medium text-sm leading-tight" data-testid={`text-customer-name-${order._id}`}>
+                              {order.userId?.name || 'Unknown'}
+                            </p>
+                            <p className="text-xs text-muted-foreground leading-tight" data-testid={`text-customer-email-${order._id}`}>
+                              {order.userId?.email || ''}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-3 text-center">
+                          <span className="text-sm" data-testid={`text-items-count-${order._id}`}>
+                            {order.items.length}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <span className="font-semibold text-sm" data-testid={`text-total-${order._id}`}>
+                            ₹{order.total.toLocaleString()}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <Badge className={`text-xs ${getStatusColor(order.orderStatus, 'order')}`} data-testid={`badge-order-status-${order._id}`}>
+                            {order.orderStatus}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <Badge className={`text-xs ${getStatusColor(getDisplayPaymentStatus(order), 'payment')}`} data-testid={`badge-payment-status-${order._id}`}>
+                            {getDisplayPaymentStatus(order)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <span className="text-sm text-muted-foreground" data-testid={`text-date-${order._id}`}>
+                            {format(new Date(order.createdAt), 'dd MMM yyyy')}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-3 text-center pr-4">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:bg-pink-50 hover:text-pink-600"
+                            onClick={() => handleViewDetails(order._id)}
+                            data-testid={`button-view-${order._id}`}
+                            title="View Order Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Pagination */}
         {ordersData && ordersData.pagination.pages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <div className="text-sm text-muted-foreground">
-              Showing page {ordersData.pagination.page} of {ordersData.pagination.pages} 
-              ({ordersData.pagination.total} total orders)
-            </div>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Page {ordersData.pagination.page} of {ordersData.pagination.pages} · {ordersData.pagination.total} orders
+            </p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                data-testid="button-prev-page"
-              >
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} data-testid="button-prev-page">
                 Previous
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(ordersData.pagination.pages, p + 1))}
-                disabled={currentPage === ordersData.pagination.pages}
-                data-testid="button-next-page"
-              >
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(ordersData.pagination.pages, p + 1))} disabled={currentPage === ordersData.pagination.pages} data-testid="button-next-page">
                 Next
               </Button>
             </div>
@@ -739,195 +521,175 @@ export default function OrderManagement() {
         )}
 
         {/* Order Detail Dialog */}
-        <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <Dialog open={detailDialogOpen} onOpenChange={(open) => {
+          setDetailDialogOpen(open);
+          if (!open) { setShowRejectionInput(false); setRejectionReason(""); }
+        }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Order Details - {selectedOrder?.orderNumber}</DialogTitle>
+              <DialogTitle className="text-lg font-bold">
+                Order #{selectedOrder?.orderNumber}
+              </DialogTitle>
             </DialogHeader>
-            
+
             {selectedOrder && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground">Order Status</div>
+              <div className="space-y-5 pt-1">
+
+                {/* Status Row */}
+                <div className="flex flex-wrap gap-3 items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Order:</span>
                     <Badge className={getStatusColor(selectedOrder.orderStatus, 'order')}>
                       {selectedOrder.orderStatus}
                     </Badge>
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground">Payment Status</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Payment:</span>
                     <Badge className={getStatusColor(selectedOrder.paymentStatus, 'payment')}>
                       {selectedOrder.paymentStatus}
                     </Badge>
                   </div>
-                </div>
-
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-2">Customer Information</div>
-                  <div className="bg-muted p-3 rounded-md space-y-1 text-sm">
-                    <div><strong>Name:</strong> {selectedOrder.userId?.name || 'Unknown'}</div>
-                    <div><strong>Email:</strong> {selectedOrder.userId?.email || 'N/A'}</div>
-                    <div><strong>Phone:</strong> {selectedOrder.userId?.phone || 'N/A'}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Method:</span>
+                    <span className="text-sm font-medium">{selectedOrder.paymentMethod?.toUpperCase()}</span>
+                  </div>
+                  <div className="ml-auto text-xs text-muted-foreground">
+                    {format(new Date(selectedOrder.createdAt), 'dd MMM yyyy, hh:mm a')}
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-2">Shipping Address</div>
-                  <div className="bg-muted p-3 rounded-md text-sm">
-                    <div>{selectedOrder.shippingAddress.fullName}</div>
-                    <div>{selectedOrder.shippingAddress.address}, {selectedOrder.shippingAddress.locality}</div>
-                    <div>{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} - {selectedOrder.shippingAddress.pincode}</div>
-                    {selectedOrder.shippingAddress.landmark && <div>Landmark: {selectedOrder.shippingAddress.landmark}</div>}
-                    <div>Phone: {selectedOrder.shippingAddress.phone}</div>
+                <Separator />
+
+                {/* Customer + Address */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Customer</p>
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+                      <p className="font-semibold">{selectedOrder.userId?.name || 'Unknown'}</p>
+                      <p className="text-muted-foreground">{selectedOrder.userId?.email || 'N/A'}</p>
+                      <p className="text-muted-foreground">{selectedOrder.userId?.phone || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Shipping Address</p>
+                    <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-0.5">
+                      <p className="font-semibold">{selectedOrder.shippingAddress.fullName}</p>
+                      <p className="text-muted-foreground">{selectedOrder.shippingAddress.address}, {selectedOrder.shippingAddress.locality}</p>
+                      <p className="text-muted-foreground">{selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} – {selectedOrder.shippingAddress.pincode}</p>
+                      {selectedOrder.shippingAddress.landmark && (
+                        <p className="text-muted-foreground">Landmark: {selectedOrder.shippingAddress.landmark}</p>
+                      )}
+                      <p className="text-muted-foreground">📞 {selectedOrder.shippingAddress.phone}</p>
+                    </div>
                   </div>
                 </div>
 
+                <Separator />
+
+                {/* Order Items */}
                 <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-2">Order Items</div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+                    Order Items ({selectedOrder.items.length})
+                  </p>
                   <div className="space-y-2">
                     {selectedOrder.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-3 p-3 bg-muted rounded-md">
+                      <div key={idx} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <img
                           src={item.image || "/default-saree.jpg"}
                           alt={item.name}
-                          className="w-16 h-16 object-cover rounded flex-shrink-0"
+                          className="w-14 h-14 object-cover rounded-md flex-shrink-0 border"
                           onError={(e) => { e.currentTarget.src = '/default-saree.jpg'; }}
                         />
-                        <div className="flex-1">
-                          <div className="font-bold">{item.name}</div>
-                          {item.description && (
-                            <div className="text-xs text-muted-foreground line-clamp-2 mb-1">
-                              {item.description}
-                            </div>
-                          )}
-                          <div className="flex flex-wrap gap-2 mb-1">
-                            {(item as any).selectedColor && (
-                              <span className="text-xs bg-background border px-2 py-0.5 rounded">
-                                Color: {(item as any).selectedColor}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{item.name}</p>
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {item.selectedColor && (
+                              <span className="text-xs bg-background border px-2 py-0.5 rounded-full">
+                                {item.selectedColor}
                               </span>
                             )}
-                            {(item as any).selectedSize && (
-                              <span className="text-xs bg-background border px-2 py-0.5 rounded font-medium">
-                                Size: {(item as any).selectedSize}
+                            {item.selectedSize && (
+                              <span className="text-xs bg-background border px-2 py-0.5 rounded-full font-medium">
+                                Size: {item.selectedSize}
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            Qty: {item.quantity} × ₹{item.price.toLocaleString()}
-                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Qty {item.quantity} × ₹{item.price.toLocaleString()}
+                          </p>
                         </div>
-                        <div className="font-semibold">
+                        <p className="font-semibold text-sm flex-shrink-0">
                           ₹{(item.price * item.quantity).toLocaleString()}
-                        </div>
+                        </p>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground mb-2">Order Summary</div>
-                  <div className="bg-muted p-3 rounded-md space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Subtotal:</span>
-                      <span>₹{selectedOrder.subtotal.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Shipping Charges:</span>
-                      <span>₹{selectedOrder.shippingCharges.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tax:</span>
+                {/* Price Breakdown */}
+                <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Subtotal</span>
+                    <span>₹{selectedOrder.subtotal.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Shipping</span>
+                    <span>₹{selectedOrder.shippingCharges.toLocaleString()}</span>
+                  </div>
+                  {selectedOrder.tax > 0 && (
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Tax</span>
                       <span>₹{selectedOrder.tax.toLocaleString()}</span>
                     </div>
-                    {selectedOrder.discount > 0 && (
-                      <div className="flex justify-between text-green-600">
-                        <span>Discount:</span>
-                        <span>-₹{selectedOrder.discount.toLocaleString()}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-bold text-lg border-t pt-2">
-                      <span>Total:</span>
-                      <span>₹{selectedOrder.total.toLocaleString()}</span>
+                  )}
+                  {selectedOrder.discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount</span>
+                      <span>−₹{selectedOrder.discount.toLocaleString()}</span>
                     </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between font-bold text-base">
+                    <span>Total</span>
+                    <span>₹{selectedOrder.total.toLocaleString()}</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                {/* PhonePe Details */}
+                {selectedOrder.paymentMethod === 'PhonePe' && (selectedOrder.phonePeTransactionId || selectedOrder.phonePeOrderId) && (
                   <div>
-                    <div className="text-muted-foreground">Payment Method</div>
-                    <div className="font-medium">{selectedOrder.paymentMethod}</div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground">Order Date</div>
-                    <div className="font-medium">
-                      {format(new Date(selectedOrder.createdAt), 'dd MMM yyyy, HH:mm')}
-                    </div>
-                  </div>
-                </div>
-
-                {selectedOrder.paymentMethod === 'PhonePe' && (
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground mb-2">Payment Details (PhonePe)</div>
-                    <div className="bg-muted p-3 rounded-md space-y-1 text-sm">
-                      {selectedOrder.phonePeTransactionId && (
-                        <div><strong>Transaction ID:</strong> {selectedOrder.phonePeTransactionId}</div>
-                      )}
-                      {selectedOrder.phonePeMerchantOrderId && (
-                        <div><strong>Merchant Order ID:</strong> {selectedOrder.phonePeMerchantOrderId}</div>
-                      )}
-                      {selectedOrder.phonePeOrderId && (
-                        <div><strong>PhonePe Order ID:</strong> {selectedOrder.phonePeOrderId}</div>
-                      )}
-                      {selectedOrder.phonePePaymentState && (
-                        <div><strong>Payment State:</strong> {selectedOrder.phonePePaymentState}</div>
-                      )}
-                      {selectedOrder.phonePePaymentDetails && selectedOrder.phonePePaymentDetails.paymentInstrument && (
-                        <>
-                          {selectedOrder.phonePePaymentDetails.paymentInstrument.type && (
-                            <div><strong>Payment Type:</strong> {selectedOrder.phonePePaymentDetails.paymentInstrument.type}</div>
-                          )}
-                          {selectedOrder.phonePePaymentDetails.paymentInstrument.utr && (
-                            <div><strong>UTR:</strong> {selectedOrder.phonePePaymentDetails.paymentInstrument.utr}</div>
-                          )}
-                        </>
-                      )}
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">PhonePe Details</p>
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-xs text-muted-foreground">
+                      {selectedOrder.phonePeTransactionId && <p>Transaction ID: <span className="font-mono text-foreground">{selectedOrder.phonePeTransactionId}</span></p>}
+                      {selectedOrder.phonePeOrderId && <p>PhonePe Order ID: <span className="font-mono text-foreground">{selectedOrder.phonePeOrderId}</span></p>}
+                      {selectedOrder.phonePePaymentState && <p>State: <span className="font-medium text-foreground">{selectedOrder.phonePePaymentState}</span></p>}
                     </div>
                   </div>
                 )}
 
-                {selectedOrder.approved && (
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground mb-2">Approval Information</div>
-                    <div className="bg-green-50 dark:bg-green-950 p-3 rounded-md space-y-1 text-sm">
-                      <div><strong>Approved By:</strong> {selectedOrder.approvedBy || 'Admin'}</div>
-                      <div><strong>Approved At:</strong> {selectedOrder.approvedAt ? format(new Date(selectedOrder.approvedAt), 'dd MMM yyyy, HH:mm') : 'N/A'}</div>
-                    </div>
+                {/* Approval / Rejection Info */}
+                {selectedOrder.approved && selectedOrder.approvedAt && (
+                  <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-sm">
+                    <p className="text-green-700 font-medium">✅ Approved by {selectedOrder.approvedBy || 'Admin'}</p>
+                    <p className="text-green-600 text-xs mt-0.5">{format(new Date(selectedOrder.approvedAt), 'dd MMM yyyy, hh:mm a')}</p>
                   </div>
                 )}
 
                 {selectedOrder.orderStatus === 'cancelled' && selectedOrder.rejectedBy && (
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground mb-2">Rejection Information</div>
-                    <div className="bg-red-50 dark:bg-red-950 p-3 rounded-md space-y-1 text-sm">
-                      <div><strong>Rejected By:</strong> {selectedOrder.rejectedBy}</div>
-                      {selectedOrder.rejectedAt && (
-                        <div><strong>Rejected At:</strong> {format(new Date(selectedOrder.rejectedAt), 'dd MMM yyyy, HH:mm')}</div>
-                      )}
-                      {selectedOrder.rejectionReason && (
-                        <div><strong>Reason:</strong> {selectedOrder.rejectionReason}</div>
-                      )}
-                    </div>
+                  <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-sm">
+                    <p className="text-red-700 font-medium">❌ Rejected by {selectedOrder.rejectedBy}</p>
+                    {selectedOrder.rejectionReason && <p className="text-red-600 text-xs mt-0.5">Reason: {selectedOrder.rejectionReason}</p>}
                   </div>
                 )}
 
+                {/* Action Buttons */}
                 {!selectedOrder.approved && (selectedOrder.orderStatus === 'pending' || selectedOrder.orderStatus === 'processing') && (
-                  <div className="space-y-3 pt-4 border-t">
+                  <div className="space-y-3 pt-2 border-t">
                     {selectedOrder.paymentMethod !== 'cod' && selectedOrder.paymentStatus !== 'paid' && (
-                      <div className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950 p-3 rounded-md">
-                        ⚠️ This is a prepaid order. Payment has not been completed yet. Cannot reject a prepaid order.
+                      <div className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-100 p-3 rounded-lg">
+                        ⚠️ Prepaid order — payment not completed. Cannot approve yet.
                       </div>
                     )}
-                    
                     <div className="flex gap-2 flex-wrap">
                       <Button
                         onClick={() => approveOrderMutation.mutate(selectedOrder._id)}
@@ -936,7 +698,7 @@ export default function OrderManagement() {
                         data-testid="button-approve-order"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        {approveOrderMutation.isPending ? 'Approving...' : 'Approve'}
+                        {approveOrderMutation.isPending ? 'Approving...' : 'Approve Order'}
                       </Button>
                       {selectedOrder.paymentMethod === 'cod' && (
                         <Button
@@ -947,22 +709,19 @@ export default function OrderManagement() {
                           data-testid="button-reject-order"
                         >
                           <XCircle className="h-4 w-4 mr-2" />
-                          {showRejectionInput ? 'Cancel' : 'Reject Order'}
+                          {showRejectionInput ? 'Cancel' : 'Reject'}
                         </Button>
                       )}
                     </div>
-
                     {showRejectionInput && (
                       <div className="space-y-2">
-                        <Label htmlFor="rejectionReason">Reason for Rejection</Label>
                         <Input
-                          id="rejectionReason"
-                          placeholder="Enter reason for rejecting this order..."
+                          placeholder="Reason for rejection..."
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
                           data-testid="input-rejection-reason"
                         />
-                        <Button 
+                        <Button
                           variant="destructive"
                           onClick={handleRejectOrder}
                           disabled={rejectOrderMutation.isPending || !rejectionReason.trim()}
@@ -977,9 +736,9 @@ export default function OrderManagement() {
                 )}
 
                 {selectedOrder.approved && selectedOrder.orderStatus !== 'delivered' && selectedOrder.orderStatus !== 'cancelled' && (
-                  <div className="space-y-3 pt-4 border-t">
-                    <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 p-3 rounded-md">
-                      ✅ Order is approved. Mark it as delivered once the customer receives it.
+                  <div className="space-y-3 pt-2 border-t">
+                    <div className="text-sm text-green-700 bg-green-50 border border-green-100 p-3 rounded-lg">
+                      ✅ Order approved. Mark as delivered once the customer receives it.
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       <Button
@@ -989,14 +748,14 @@ export default function OrderManagement() {
                         data-testid="button-mark-delivered"
                       >
                         <PackageCheck className="h-4 w-4 mr-2" />
-                        {markDeliveredMutation.isPending ? 'Updating...' : 'Delivery Completed'}
+                        {markDeliveredMutation.isPending ? 'Updating...' : 'Mark Delivered'}
                       </Button>
                       {selectedOrder.paymentMethod === 'cod' && (
                         <Button
                           variant="outline"
                           onClick={() => markDeliveredMutation.mutate({ orderId: selectedOrder._id, paymentReceived: true })}
                           disabled={markDeliveredMutation.isPending}
-                          className="flex-1 min-w-[200px] border-green-600 text-green-700 hover:bg-green-50"
+                          className="flex-1 min-w-[180px] border-green-500 text-green-700 hover:bg-green-50"
                           data-testid="button-mark-delivered-payment-received"
                         >
                           <Banknote className="h-4 w-4 mr-2" />
@@ -1008,14 +767,14 @@ export default function OrderManagement() {
                 )}
 
                 {selectedOrder.orderStatus === 'delivered' && selectedOrder.paymentStatus === 'pending' && selectedOrder.paymentMethod === 'cod' && (
-                  <div className="space-y-3 pt-4 border-t">
-                    <div className="text-sm text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950 p-3 rounded-md">
-                      💰 Order delivered but payment not yet received. Update payment status when collected.
+                  <div className="space-y-3 pt-2 border-t">
+                    <div className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-100 p-3 rounded-lg">
+                      💰 Delivered but payment not yet collected. Update when received.
                     </div>
                     <Button
                       onClick={() => updatePaymentStatusMutation.mutate({ orderId: selectedOrder._id, paymentStatus: 'paid' })}
                       disabled={updatePaymentStatusMutation.isPending}
-                      className="w-full border-green-600 bg-green-600 hover:bg-green-700 text-white"
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
                       data-testid="button-mark-payment-received"
                     >
                       <Banknote className="h-4 w-4 mr-2" />
@@ -1023,29 +782,12 @@ export default function OrderManagement() {
                     </Button>
                   </div>
                 )}
+
               </div>
             )}
           </DialogContent>
         </Dialog>
 
-        {/* Image Preview Dialog */}
-        <Dialog open={previewImageOpen} onOpenChange={setPreviewImageOpen}>
-          <DialogContent className="max-w-2xl" data-testid="dialog-image-preview">
-            <DialogHeader>
-              <DialogTitle>Product Image</DialogTitle>
-            </DialogHeader>
-            <div className="flex justify-center">
-              {previewImage && (
-                <img 
-                  src={previewImage} 
-                  alt="Product preview"
-                  className="max-h-[500px] max-w-full object-contain rounded-md"
-                  data-testid="img-preview"
-                />
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </AdminLayout>
   );
