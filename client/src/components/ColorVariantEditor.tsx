@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +44,7 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
   const [isUploading, setIsUploading] = useState<boolean[]>([false, false, false, false, false]);
   const [uploadFailed, setUploadFailed] = useState<boolean[]>([false, false, false, false, false]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [showColorSuggestions, setShowColorSuggestions] = useState(false);
 
   const [variantIsNew, setVariantIsNew] = useState<boolean>(false);
   const [variantIsBestseller, setVariantIsBestseller] = useState<boolean>(false);
@@ -55,6 +55,12 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
   const [newSizeStock, setNewSizeStock] = useState(0);
 
   const blouseTotalStock = blouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
+  const filteredColors = availableColors.filter((color) =>
+    color.toLowerCase().includes(selectedColor.trim().toLowerCase())
+  );
+  const hasExactColorMatch = availableColors.some((color) =>
+    color.toLowerCase() === selectedColor.trim().toLowerCase()
+  );
 
   const handleImageUpload = async (slotIndex: number, file: File) => {
     setIsUploading(prev => {
@@ -386,32 +392,59 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
             <Label htmlFor="color-select" data-testid="label-color-select">
               Color *
             </Label>
-            <Select 
-              value={selectedColor} 
-              onValueChange={setSelectedColor}
-            >
-              <SelectTrigger data-testid="select-color">
-                <SelectValue placeholder="Choose a color" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableColors.map((color) => (
-                  <SelectItem 
-                    key={color} 
-                    value={color}
-                    data-testid={`option-color-${color.toLowerCase()}`}
-                  >
-                    {color}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              id="color-select"
-              value={selectedColor}
-              onChange={(e) => setSelectedColor(e.target.value)}
-              placeholder="Or type a custom color name"
-              data-testid="input-custom-color"
-            />
+            <div className="relative">
+              <Input
+                id="color-select"
+                value={selectedColor}
+                onChange={(e) => {
+                  setSelectedColor(e.target.value);
+                  setShowColorSuggestions(true);
+                }}
+                onFocus={() => setShowColorSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowColorSuggestions(false), 120)}
+                placeholder="Search or type a custom color name"
+                autoComplete="off"
+                data-testid="input-color-search"
+              />
+              {showColorSuggestions && (
+                <div className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-md border bg-background shadow-lg" data-testid="dropdown-color-suggestions">
+                  {filteredColors.length > 0 ? (
+                    filteredColors.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setSelectedColor(color);
+                          setShowColorSuggestions(false);
+                        }}
+                        data-testid={`option-color-${color.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        {color}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-sm text-muted-foreground" data-testid="text-no-color-results">
+                      No saved colors found
+                    </div>
+                  )}
+                  {selectedColor.trim() && !hasExactColorMatch && (
+                    <button
+                      type="button"
+                      className="w-full border-t px-3 py-2 text-left text-sm font-medium text-pink-600 hover:bg-pink-50"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setShowColorSuggestions(false);
+                      }}
+                      data-testid="option-use-custom-color"
+                    >
+                      Use custom color: {selectedColor.trim()}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {isBlouse ? (

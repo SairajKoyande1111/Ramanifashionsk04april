@@ -254,6 +254,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = req.query;
 
       const query: any = {};
+      const addPriceRangeAndCondition = (condition: any) => {
+        if (!query.$and) query.$and = [];
+        query.$and.push(condition);
+      };
       const addAndCondition = (condition: any) => {
         if (!query.$and) query.$and = [];
         query.$and.push(condition);
@@ -1953,7 +1957,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         query.$or = orConditions;
       } else if (category) {
         const categories = (category as string).split(',').filter(Boolean);
-        query.category = categories.length > 1 ? { $in: categories } : categories[0];
+        const catValues = categories.length > 1 ? categories : categories[0];
+        query.$or = [
+          { category: typeof catValues === 'string' ? catValues : { $in: catValues } },
+          { subcategory: typeof catValues === 'string' ? catValues : { $in: catValues } },
+        ];
       }
       if (fabric) {
         const fabrics = (fabric as string).split(',').filter(Boolean);
@@ -1969,9 +1977,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (inStock === 'true') query.inStock = true;
-      if (req.query.isNew === 'true') query.isNew = true;
-      if (req.query.isBestseller === 'true') query.isBestseller = true;
-      if (req.query.isTrending === 'true') query.isTrending = true;
+      if (req.query.isNew === 'true') addPriceRangeAndCondition({ $or: [{ 'colorVariants.isNew': true }, { category: 'JEWELLERY', isNew: true }] });
+      if (req.query.isBestseller === 'true') addPriceRangeAndCondition({ $or: [{ 'colorVariants.isBestseller': true }, { category: 'JEWELLERY', isBestseller: true }] });
+      if (req.query.isTrending === 'true') addPriceRangeAndCondition({ $or: [{ 'colorVariants.isTrending': true }, { category: 'JEWELLERY', isTrending: true }] });
       
       // Filter for sale products
       if (onSale === 'true') {
@@ -2080,7 +2088,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin Product Management (protected)
   app.post("/api/admin/products", authenticateAdmin, async (req, res) => {
     try {
-      const product = new Product(req.body);
+      const productData = { ...req.body };
+      if (Array.isArray(productData.colorVariants) && productData.colorVariants.length > 0) {
+        productData.colorVariants = productData.colorVariants.map((variant: any) => {
+          const stockQuantity = Math.max(0, Number(variant.stockQuantity) || 0);
+          return {
+            ...variant,
+            color: typeof variant.color === 'string' ? variant.color.trim() : variant.color,
+            stockQuantity,
+            inStock: stockQuantity > 0,
+          };
+        });
+        productData.stockQuantity = productData.colorVariants.reduce((sum: number, variant: any) => sum + (variant.stockQuantity || 0), 0);
+        productData.inStock = productData.stockQuantity > 0;
+      }
+      if (typeof productData.subcategory === 'string') productData.subcategory = productData.subcategory.trim();
+      const product = new Product(productData);
       await product.save();
       res.status(201).json(product);
     } catch (error: any) {
@@ -2091,6 +2114,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/products/:id", authenticateAdmin, async (req, res) => {
     try {
       const updateData = { ...req.body, updatedAt: new Date() };
+      if (Array.isArray(updateData.colorVariants) && updateData.colorVariants.length > 0) {
+        updateData.colorVariants = updateData.colorVariants.map((variant: any) => {
+          const stockQuantity = Math.max(0, Number(variant.stockQuantity) || 0);
+          return {
+            ...variant,
+            color: typeof variant.color === 'string' ? variant.color.trim() : variant.color,
+            stockQuantity,
+            inStock: stockQuantity > 0,
+          };
+        });
+        updateData.stockQuantity = updateData.colorVariants.reduce((sum: number, variant: any) => sum + (variant.stockQuantity || 0), 0);
+        updateData.inStock = updateData.stockQuantity > 0;
+      }
+      if (typeof updateData.subcategory === 'string') updateData.subcategory = updateData.subcategory.trim();
       
       // Automatically set inStock based on stockQuantity
       if (updateData.stockQuantity !== undefined) {
@@ -2166,7 +2203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/inventory", authenticateAdmin, async (req, res) => {
     try {
       const products = await Product.find()
-        .select('name category stockQuantity inStock price colorVariants')
+        .select('name category subcategory stockQuantity inStock price colorVariants')
         .sort({ stockQuantity: 1 })
         .lean();
 

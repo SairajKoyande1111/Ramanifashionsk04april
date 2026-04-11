@@ -221,6 +221,7 @@ useEffect(() => {
 
 ## Recent Debugging Notes
 - April 11, 2026: Section tags for New Arrival, Trending, and Bestseller now apply through color variants for apparel products instead of product-level flags. Product listing filters only display the specific tagged variants, and color sidebar options use each displayed card's `displayColor`. Admin color variants can now use typed custom color names alongside the dropdown.
+- April 11, 2026: Replaced the admin color variant dropdown/custom text split with one searchable color input that also accepts new custom color names. Inventory now includes subcategory in the API/display and product stock is recomputed from color variant stock during create/update.
 - Fixed hook call order issue in Home.tsx by using proper `useEffect` instead of `useState`
 - Ensured FormData doesn't set Content-Type header (browser does it automatically with boundary)
 - Created `/public/media/` directory structure for uploads

@@ -507,7 +507,8 @@ export default function InventoryManagement() {
     if (searchQuery) {
       filtered = filtered.filter((p: any) =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.category?.toLowerCase().includes(searchQuery.toLowerCase())
+        p.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.subcategory?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -977,7 +978,14 @@ export default function InventoryManagement() {
                             </div>
                           </TableCell>
                           <TableCell className="py-3 text-sm text-muted-foreground" data-testid={`cell-category-${product._id}`}>
-                            {product.category}
+                            <div className="flex flex-col">
+                              <span>{product.category}</span>
+                              {product.subcategory && (
+                                <span className="text-xs text-pink-600 font-medium" data-testid={`text-subcategory-${product._id}`}>
+                                  {product.subcategory}
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="py-3 text-sm font-medium" data-testid={`cell-price-${product._id}`}>
                             ₹{product.price}
