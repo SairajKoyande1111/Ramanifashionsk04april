@@ -439,7 +439,7 @@ export default function ProductDetail() {
             </AnimatePresence>
 
             <div className="flex flex-row flex-wrap gap-2 sm:gap-3 justify-center">
-              {images.slice(0, 4).map((img: string, idx: number) => (
+              {images.slice(0, 5).map((img: string, idx: number) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImage(idx)}

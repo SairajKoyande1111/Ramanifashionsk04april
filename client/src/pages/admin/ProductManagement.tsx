@@ -701,7 +701,7 @@ export default function ProductManagement() {
                     onCheckedChange={(checked) => setProductForm({...productForm, isNew: checked as boolean})}
                     data-testid="checkbox-is-new"
                   />
-                  <Label htmlFor="isNew" data-testid="label-is-new">New Arrival</Label>
+                  <Label htmlFor="isNew" data-testid="label-is-new">New Arrival <span className="text-xs text-muted-foreground">(all variants)</span></Label>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -711,7 +711,7 @@ export default function ProductManagement() {
                     onCheckedChange={(checked) => setProductForm({...productForm, isTrending: checked as boolean})}
                     data-testid="checkbox-is-trending"
                   />
-                  <Label htmlFor="isTrending" data-testid="label-is-trending">Trending</Label>
+                  <Label htmlFor="isTrending" data-testid="label-is-trending">Trending <span className="text-xs text-muted-foreground">(all variants)</span></Label>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -721,7 +721,7 @@ export default function ProductManagement() {
                     onCheckedChange={(checked) => setProductForm({...productForm, isBestseller: checked as boolean})}
                     data-testid="checkbox-is-bestseller"
                   />
-                  <Label htmlFor="isBestseller" data-testid="label-is-bestseller">Bestseller</Label>
+                  <Label htmlFor="isBestseller" data-testid="label-is-bestseller">Bestseller <span className="text-xs text-muted-foreground">(all variants)</span></Label>
                 </div>
 
                 <div className="flex items-center gap-2">

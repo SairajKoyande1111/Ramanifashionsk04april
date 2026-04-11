@@ -27,6 +27,9 @@ const productSchema = new Schema({
       },
       stockQuantity: { type: Number, default: 0 },
       inStock: { type: Boolean, default: true },
+      isNew: { type: Boolean, default: false },
+      isBestseller: { type: Boolean, default: false },
+      isTrending: { type: Boolean, default: false },
       blouseSizes: {
         type: [{
           size: { type: String, required: true },

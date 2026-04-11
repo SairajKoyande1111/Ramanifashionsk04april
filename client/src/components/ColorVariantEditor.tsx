@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Link as LinkIcon, Trash2, Edit2, Plus, X } from "lucide-react";
 import { compressImageFile } from "@/lib/compressImage";
@@ -19,6 +20,9 @@ export interface ColorVariant {
   images: string[];
   stockQuantity: number;
   inStock: boolean;
+  isNew?: boolean;
+  isBestseller?: boolean;
+  isTrending?: boolean;
   blouseSizes?: BlouseSize[];
 }
 
@@ -41,6 +45,10 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
   const [isUploading, setIsUploading] = useState<boolean[]>([false, false, false, false, false]);
   const [uploadFailed, setUploadFailed] = useState<boolean[]>([false, false, false, false, false]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  const [variantIsNew, setVariantIsNew] = useState<boolean>(false);
+  const [variantIsBestseller, setVariantIsBestseller] = useState<boolean>(false);
+  const [variantIsTrending, setVariantIsTrending] = useState<boolean>(false);
 
   const [blouseSizes, setBlouseSizes] = useState<BlouseSize[]>([]);
   const [newSizeInput, setNewSizeInput] = useState("");
@@ -211,6 +219,9 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
         images: validImages,
         stockQuantity: totalStock,
         inStock: totalStock > 0,
+        isNew: variantIsNew,
+        isBestseller: variantIsBestseller,
+        isTrending: variantIsTrending,
         blouseSizes: [...blouseSizes],
       };
       if (editingIndex !== null) {
@@ -232,6 +243,9 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       setBlouseSizes([]);
       setNewSizeInput("");
       setNewSizeStock(0);
+      setVariantIsNew(false);
+      setVariantIsBestseller(false);
+      setVariantIsTrending(false);
       setUploadFailed([false, false, false, false, false]);
       return;
     }
@@ -261,7 +275,10 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
         color: selectedColor, 
         images: validImages,
         stockQuantity: stockQuantity,
-        inStock: finalInStock
+        inStock: finalInStock,
+        isNew: variantIsNew,
+        isBestseller: variantIsBestseller,
+        isTrending: variantIsTrending,
       };
       onChange(updatedVariants);
       toast({ title: "Color variant updated!" });
@@ -279,7 +296,10 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
         color: selectedColor, 
         images: validImages,
         stockQuantity: stockQuantity,
-        inStock: finalInStock
+        inStock: finalInStock,
+        isNew: variantIsNew,
+        isBestseller: variantIsBestseller,
+        isTrending: variantIsTrending,
       }]);
       toast({ title: "Color variant added successfully!" });
     }
@@ -288,6 +308,9 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
     setCurrentImages(["", "", "", "", ""]);
     setStockQuantity(0);
     setInStock(true);
+    setVariantIsNew(false);
+    setVariantIsBestseller(false);
+    setVariantIsTrending(false);
     setUploadFailed([false, false, false, false, false]);
   };
 
@@ -305,6 +328,9 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       setStockQuantity(variant.stockQuantity || 0);
       setInStock(variant.inStock !== undefined ? variant.inStock : true);
     }
+    setVariantIsNew(variant.isNew ?? false);
+    setVariantIsBestseller(variant.isBestseller ?? false);
+    setVariantIsTrending(variant.isTrending ?? false);
     setEditingIndex(index);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -319,6 +345,9 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
     setCurrentImages(["", "", "", "", ""]);
     setStockQuantity(0);
     setInStock(true);
+    setVariantIsNew(false);
+    setVariantIsBestseller(false);
+    setVariantIsTrending(false);
     setBlouseSizes([]);
     setNewSizeInput("");
     setNewSizeStock(0);
@@ -491,6 +520,40 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
             </div>
           )}
 
+          <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+            <Label className="text-sm font-medium">Status Tags for this Color Variant</Label>
+            <p className="text-xs text-muted-foreground">These tags apply only to this specific color variant.</p>
+            <div className="flex gap-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="variant-isNew"
+                  checked={variantIsNew}
+                  onCheckedChange={(checked) => setVariantIsNew(checked as boolean)}
+                  data-testid="checkbox-variant-is-new"
+                />
+                <Label htmlFor="variant-isNew" className="cursor-pointer text-sm" data-testid="label-variant-is-new">New Arrival</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="variant-isBestseller"
+                  checked={variantIsBestseller}
+                  onCheckedChange={(checked) => setVariantIsBestseller(checked as boolean)}
+                  data-testid="checkbox-variant-is-bestseller"
+                />
+                <Label htmlFor="variant-isBestseller" className="cursor-pointer text-sm" data-testid="label-variant-is-bestseller">Bestseller</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="variant-isTrending"
+                  checked={variantIsTrending}
+                  onCheckedChange={(checked) => setVariantIsTrending(checked as boolean)}
+                  data-testid="checkbox-variant-is-trending"
+                />
+                <Label htmlFor="variant-isTrending" className="cursor-pointer text-sm" data-testid="label-variant-is-trending">Trending</Label>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label data-testid="label-color-images">
               Product Images (1-5 images required) *
@@ -614,6 +677,9 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
                           <span className="text-sm text-muted-foreground">
                             {variant.images.length} image{variant.images.length !== 1 ? 's' : ''}
                           </span>
+                          {variant.isNew && <Badge variant="outline" className="text-green-600 border-green-400 text-xs">New</Badge>}
+                          {variant.isBestseller && <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">Bestseller</Badge>}
+                          {variant.isTrending && <Badge variant="outline" className="text-blue-600 border-blue-400 text-xs">Trending</Badge>}
                           {isBlouse ? (
                             <>
                               <Badge variant="secondary" data-testid={`badge-stock-status-${index}`}>

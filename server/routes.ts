@@ -293,9 +293,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (inStock === 'false') { /* show all */ } else { query.inStock = true; }
-      if (req.query.isNew === 'true') query.isNew = true;
-      if (req.query.isBestseller === 'true') query.isBestseller = true;
-      if (req.query.isTrending === 'true') query.isTrending = true;
+      if (req.query.isNew === 'true') query.$or = [{ isNew: true }, { 'colorVariants.isNew': true }];
+      if (req.query.isBestseller === 'true') query.$or = [{ isBestseller: true }, { 'colorVariants.isBestseller': true }];
+      if (req.query.isTrending === 'true') query.$or = [{ isTrending: true }, { 'colorVariants.isTrending': true }];
       
       // Filter for sale products
       if (onSale === 'true') {
@@ -370,18 +370,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const total = await Product.countDocuments(query);
 
         // Flatten products with color variants into separate cards
+        const flagFilter = req.query.isNew === 'true' ? 'isNew' : req.query.isBestseller === 'true' ? 'isBestseller' : req.query.isTrending === 'true' ? 'isTrending' : null;
         const flattenedProducts = products.flatMap((product: any) => {
           if (product.colorVariants && product.colorVariants.length > 0) {
-            return product.colorVariants.map((variant: any, index: number) => ({
-              ...product,
-              _id: `${product._id}_variant_${index}`,
-              baseProductId: product._id,
-              variantIndex: index,
-              displayColor: variant.color,
-              displayImages: variant.images && variant.images.length > 0 ? variant.images : product.images,
-              variantStockQuantity: variant.stockQuantity,
-              variantInStock: variant.inStock,
-            }));
+            let variants = product.colorVariants;
+            if (flagFilter) {
+              const filtered = variants.filter((v: any) =>
+                v[flagFilter] === true || (v[flagFilter] === undefined && product[flagFilter] === true)
+              );
+              if (filtered.length > 0) variants = filtered;
+            }
+            return variants.map((variant: any) => {
+              const variantIndex = product.colorVariants.indexOf(variant);
+              return {
+                ...product,
+                _id: `${product._id}_variant_${variantIndex}`,
+                baseProductId: product._id,
+                variantIndex: variantIndex,
+                displayColor: variant.color,
+                displayImages: variant.images && variant.images.length > 0 ? variant.images : product.images,
+                variantStockQuantity: variant.stockQuantity,
+                variantInStock: variant.inStock,
+                isNew: variant.isNew !== undefined ? variant.isNew : product.isNew,
+                isBestseller: variant.isBestseller !== undefined ? variant.isBestseller : product.isBestseller,
+                isTrending: variant.isTrending !== undefined ? variant.isTrending : product.isTrending,
+              };
+            });
           }
           return [product];
         });
@@ -431,18 +445,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const total = await Product.countDocuments(query);
 
         // Flatten products with color variants into separate cards
+        const flagFilter2 = req.query.isNew === 'true' ? 'isNew' : req.query.isBestseller === 'true' ? 'isBestseller' : req.query.isTrending === 'true' ? 'isTrending' : null;
         const flattenedProducts = products.flatMap((product: any) => {
           if (product.colorVariants && product.colorVariants.length > 0) {
-            return product.colorVariants.map((variant: any, index: number) => ({
-              ...product,
-              _id: `${product._id}_variant_${index}`,
-              baseProductId: product._id,
-              variantIndex: index,
-              displayColor: variant.color,
-              displayImages: variant.images && variant.images.length > 0 ? variant.images : product.images,
-              variantStockQuantity: variant.stockQuantity,
-              variantInStock: variant.inStock,
-            }));
+            let variants = product.colorVariants;
+            if (flagFilter2) {
+              const filtered = variants.filter((v: any) =>
+                v[flagFilter2] === true || (v[flagFilter2] === undefined && product[flagFilter2] === true)
+              );
+              if (filtered.length > 0) variants = filtered;
+            }
+            return variants.map((variant: any) => {
+              const variantIndex = product.colorVariants.indexOf(variant);
+              return {
+                ...product,
+                _id: `${product._id}_variant_${variantIndex}`,
+                baseProductId: product._id,
+                variantIndex: variantIndex,
+                displayColor: variant.color,
+                displayImages: variant.images && variant.images.length > 0 ? variant.images : product.images,
+                variantStockQuantity: variant.stockQuantity,
+                variantInStock: variant.inStock,
+                isNew: variant.isNew !== undefined ? variant.isNew : product.isNew,
+                isBestseller: variant.isBestseller !== undefined ? variant.isBestseller : product.isBestseller,
+                isTrending: variant.isTrending !== undefined ? variant.isTrending : product.isTrending,
+              };
+            });
           }
           return [product];
         });
