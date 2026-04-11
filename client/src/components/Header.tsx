@@ -215,7 +215,7 @@ export default function Header({ cartCount = 0, wishlistCount = 0, onMenuClick }
         isTrending: pathname === "/trending-collection",
         isCategories: pathname === "/products" && (hasCategory || pathname === "/products"),
         isSale: pathname === "/sale",
-        isAbout: pathname === "/about",
+        isBestSeller: pathname === "/bestseller",
         isContact: isOnContactSection
       };
     } catch {
@@ -226,7 +226,7 @@ export default function Header({ cartCount = 0, wishlistCount = 0, onMenuClick }
         isTrending: location === "/trending-collection",
         isCategories: location.includes("/products"),
         isSale: location === "/sale",
-        isAbout: location === "/about",
+        isBestSeller: location === "/bestseller",
         isContact: location.includes("#contact")
       };
     }
@@ -483,11 +483,11 @@ export default function Header({ cartCount = 0, wishlistCount = 0, onMenuClick }
                   </NavigationMenuItem>
                   <NavigationMenuItem>
                     <Link 
-                      href="/about" 
-                      className={`nav-link px-2 lg:px-3 py-2 tracking-wide text-sm lg:text-base font-medium whitespace-nowrap ${navState.isAbout ? "active text-primary" : ""}`} 
-                      data-testid="link-about"
+                      href="/bestseller" 
+                      className={`nav-link px-2 lg:px-3 py-2 tracking-wide text-sm lg:text-base font-medium whitespace-nowrap ${navState.isBestSeller ? "active text-primary" : ""}`} 
+                      data-testid="link-bestseller"
                     >
-                      ABOUT US
+                      BEST SELLER
                     </Link>
                   </NavigationMenuItem>
                   <NavigationMenuItem>
@@ -509,7 +509,7 @@ export default function Header({ cartCount = 0, wishlistCount = 0, onMenuClick }
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-10 w-10 md:h-12 md:w-12"
+              className="h-11 w-11 md:h-12 md:w-12"
               onClick={() => {
                 setSearchBarOpen(!searchBarOpen);
                 if (!searchBarOpen) {
@@ -518,14 +518,14 @@ export default function Header({ cartCount = 0, wishlistCount = 0, onMenuClick }
               }}
               data-testid="button-search-toggle"
             >
-              <Search className="h-5 w-5 md:h-6 md:w-6" />
+              <Search className="h-6 w-6 md:h-7 md:w-7" />
             </Button>
 
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-12 w-12 hover:bg-gray-100" data-testid="button-account">
-                    <User className="h-8 w-8" />
+                  <Button variant="ghost" size="icon" className="h-11 w-11 md:h-12 md:w-12 hover:bg-gray-100" data-testid="button-account">
+                    <User className="h-7 w-7 md:h-9 md:w-9" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -553,16 +553,16 @@ export default function Header({ cartCount = 0, wishlistCount = 0, onMenuClick }
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-12 w-12 hover:bg-gray-100" 
+                className="h-11 w-11 md:h-12 md:w-12 hover:bg-gray-100" 
                 onClick={openLogin} 
                 data-testid="button-login"
               >
-                <User className="h-8 w-8" />
+                <User className="h-7 w-7 md:h-9 md:w-9" />
               </Button>
             )}
             
-            <Button variant="ghost" size="icon" className="relative h-12 w-12 hover:bg-gray-100" onClick={() => setLocation("/wishlist")} data-testid="button-wishlist">
-              <Heart className="h-8 w-8" />
+            <Button variant="ghost" size="icon" className="relative h-11 w-11 md:h-12 md:w-12 hover:bg-gray-100" onClick={() => setLocation("/wishlist")} data-testid="button-wishlist">
+              <Heart className="h-7 w-7 md:h-9 md:w-9" />
               {actualWishlistCount > 0 && (
                 <Badge 
                   className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
@@ -573,8 +573,8 @@ export default function Header({ cartCount = 0, wishlistCount = 0, onMenuClick }
               )}
             </Button>
             
-            <Button variant="ghost" size="icon" className="relative h-12 w-12 hover:bg-gray-100" onClick={() => setLocation("/cart")} data-testid="button-bag">
-              <ShoppingBag className="h-8 w-8" />
+            <Button variant="ghost" size="icon" className="relative h-11 w-11 md:h-12 md:w-12 hover:bg-gray-100" onClick={() => setLocation("/cart")} data-testid="button-bag">
+              <ShoppingBag className="h-7 w-7 md:h-9 md:w-9" />
               {actualCartCount > 0 && (
                 <Badge 
                   className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
@@ -795,12 +795,12 @@ export default function Header({ cartCount = 0, wishlistCount = 0, onMenuClick }
                 SALE
               </Link>
               <Link
-                href="/about"
-                className={`text-base font-medium py-3 px-4 block rounded-md hover-elevate transition-colors ${navState.isAbout ? "bg-primary/10 text-primary" : "text-foreground"}`}
+                href="/bestseller"
+                className={`text-base font-medium py-3 px-4 block rounded-md hover-elevate transition-colors ${navState.isBestSeller ? "bg-primary/10 text-primary" : "text-foreground"}`}
                 onClick={() => setMobileMenuOpen(false)}
-                data-testid="mobile-link-about"
+                data-testid="mobile-link-bestseller"
               >
-                ABOUT US
+                BEST SELLER
               </Link>
               <button
                 onClick={() => {

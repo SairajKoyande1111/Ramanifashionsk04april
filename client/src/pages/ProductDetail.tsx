@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -47,12 +47,21 @@ export default function ProductDetail() {
   const [selectedBlouseSize, setSelectedBlouseSize] = useState<string | null>(null);
   const [isZooming, setIsZooming] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  const hasMoved = useRef(false);
+
+  const handleImageMouseEnter = () => {
+    hasMoved.current = false;
+  };
 
   const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     setZoomPos({ x, y });
+    if (!hasMoved.current) {
+      hasMoved.current = true;
+      setIsZooming(true);
+    }
   };
 
   // Extract base product ID and variant index from URL
@@ -73,6 +82,8 @@ export default function ProductDetail() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     setSelectedImage(0);
+    setIsZooming(false);
+    hasMoved.current = false;
   }, [id]);
 
   const { data: product, isLoading } = useQuery({
@@ -396,8 +407,8 @@ export default function ProductDetail() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
-                onMouseEnter={() => setIsZooming(true)}
-                onMouseLeave={() => setIsZooming(false)}
+                onMouseEnter={handleImageMouseEnter}
+                onMouseLeave={() => { setIsZooming(false); hasMoved.current = false; }}
                 onMouseMove={handleImageMouseMove}
                 style={{ cursor: isZooming ? 'zoom-in' : 'default' }}
               >

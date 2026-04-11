@@ -100,6 +100,10 @@ export default function Home() {
     queryKey: ["/api/products?isTrending=true&limit=6&inStock=false"],
   });
 
+  const { data: bestsellerData } = useQuery({
+    queryKey: ["/api/products?isBestseller=true&limit=6&inStock=false"],
+  });
+
   const { data: categoriesData } = useQuery<any[]>({
     queryKey: ["/api/categories"],
   });
@@ -110,6 +114,7 @@ export default function Home() {
 
   const newArrivals = (newArrivalsData as any)?.products || [];
   const trendingProducts = (trendingData as any)?.products || [];
+  const bestsellerProducts = (bestsellerData as any)?.products || [];
   const shopCategories = categoriesData ?? [];
 
   const contactForm = useForm<ContactFormValues>({
@@ -723,6 +728,131 @@ export default function Home() {
                   <source src={videoUrl} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video>
+              </div>
+            </div>
+          </motion.section>
+        )}
+
+        {bestsellerProducts.length > 0 && (
+          <motion.section
+            className="py-8 md:py-12"
+            style={{ backgroundColor: "rgba(250, 220, 235, 0.7)" }}
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="max-w-7xl mx-auto px-4 lg:px-3">
+              <motion.div
+                className="flex flex-row items-center justify-between gap-4 mb-6"
+                initial={{ opacity: 0, y: -20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <div className="text-center sm:text-left flex-1">
+                  <h2
+                    className="text-2xl md:text-3xl font-bold font-serif bg-primary text-white border-2 border-white rounded-full px-6 md:px-8 py-2 md:py-3 inline-block"
+                    data-testid="text-section-bestseller"
+                  >
+                    Best Sellers
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setLocation("/bestseller")}
+                  className="hidden sm:flex px-6 md:px-8 py-2 md:py-3 bg-primary text-white border-2 border-white rounded-full hover:bg-primary/90 transition-colors font-bold text-sm md:text-base"
+                  data-testid="button-view-all-bestseller"
+                >
+                  View All
+                </button>
+              </motion.div>
+              {/* Mobile: 2 columns × 3 rows grid */}
+              <motion.div
+                className="grid grid-cols-2 gap-4 md:hidden"
+                variants={staggerContainer}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+              >
+                {[...bestsellerProducts.slice(0, 6), ...Array(Math.max(0, 6 - bestsellerProducts.slice(0, 6).length)).fill(null)].map((product: any, index: number) =>
+                  product ? (
+                    <motion.div
+                      key={product._id}
+                      variants={fadeInUp}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <ProductCard
+                        id={product._id}
+                        displayColor={product.displayColor}
+                        name={product.name}
+                        image={product.displayImages?.[0] || product.images?.[0]}
+                        secondaryImage={product.displayImages?.[1] || product.images?.[1]}
+                        price={product.price}
+                        originalPrice={product.originalPrice}
+                        discount={
+                          product.originalPrice
+                            ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+                            : 0
+                        }
+                        rating={product.rating}
+                        reviewCount={product.reviewCount}
+                        isBestseller={true}
+                        inStock={product.variantInStock !== undefined ? product.variantInStock !== false : product.inStock !== false}
+                        shortDescription={product.subDescription}
+                        onClick={() => setLocation(`/product/${product._id}`)}
+                      />
+                    </motion.div>
+                  ) : (
+                    <div key={`bs-mobile-placeholder-${index}`} className="invisible" />
+                  )
+                )}
+              </motion.div>
+              {/* Desktop: horizontally scrollable cards */}
+              <motion.div
+                className="hidden md:flex overflow-x-auto gap-4 pb-3 scrollbar-hide"
+                variants={staggerContainer}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+              >
+                {bestsellerProducts.slice(0, 6).map((product: any) => (
+                  <motion.div
+                    key={product._id}
+                    variants={fadeInUp}
+                    transition={{ duration: 0.5 }}
+                    className="flex-shrink-0 w-[220px] lg:w-[240px]"
+                  >
+                    <ProductCard
+                      id={product._id}
+                      displayColor={product.displayColor}
+                      name={product.name}
+                      image={product.displayImages?.[0] || product.images?.[0]}
+                      secondaryImage={product.displayImages?.[1] || product.images?.[1]}
+                      price={product.price}
+                      originalPrice={product.originalPrice}
+                      discount={
+                        product.originalPrice
+                          ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+                          : 0
+                      }
+                      rating={product.rating}
+                      reviewCount={product.reviewCount}
+                      isBestseller={true}
+                      inStock={product.variantInStock !== undefined ? product.variantInStock !== false : product.inStock !== false}
+                      shortDescription={product.subDescription}
+                      onClick={() => setLocation(`/product/${product._id}`)}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+              <div className="flex sm:hidden justify-center mt-6">
+                <button
+                  onClick={() => setLocation("/bestseller")}
+                  className="px-6 md:px-8 py-2 md:py-3 bg-primary text-white border-2 border-white rounded-full hover:bg-primary/90 transition-colors font-bold text-sm md:text-base"
+                  data-testid="button-view-all-bestseller-mobile"
+                >
+                  View All
+                </button>
               </div>
             </div>
           </motion.section>
