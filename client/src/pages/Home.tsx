@@ -69,7 +69,6 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAllReviews, setShowAllReviews] = useState(false);
   const [ramaniBanner, setRamaniBanner] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const { toast } = useToast();
@@ -903,7 +902,10 @@ export default function Home() {
                   <h3 className="text-lg font-semibold text-foreground mb-4">
                     Customer Photos ({customerPhotos.length})
                   </h3>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div
+                    className="grid grid-cols-3 gap-2 overflow-y-auto"
+                    style={{ maxHeight: "260px" }}
+                  >
                     {customerPhotos.map((photo, index) => (
                       <div
                         key={index}
@@ -922,95 +924,99 @@ export default function Home() {
               </motion.div>
 
               <motion.div
-                className="lg:col-span-2 space-y-6"
-                variants={staggerContainer}
-                initial="hidden"
-                whileInView="visible"
+                className="lg:col-span-2"
+                initial={{ opacity: 0, x: 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.6 }}
               >
-                {(showAllReviews ? customerReviews : customerReviews.slice(0, 4)).map((review, index) => (
-                  <motion.div
-                    key={index}
-                    className="bg-background rounded-xl p-6 shadow-sm border border-border"
-                    variants={fadeInUp}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xl font-semibold text-primary">
-                          {review.name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-semibold text-foreground">
-                            {review.name}
-                          </h4>
-                          {review.verifiedPurchase && (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                              ✓ Verified Purchase
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 flex-wrap">
-                          <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded text-sm font-medium">
-                            {review.rating}★
-                          </div>
-                          <span className="text-sm text-muted-foreground">
-                            {review.date}
-                          </span>
-                          {review.productName && (
-                            <span className="text-xs text-muted-foreground italic">
-                              {review.productName}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                <div
+                  className="space-y-4 overflow-y-auto pr-2"
+                  style={{ maxHeight: "620px" }}
+                  data-testid="reviews-scroll-container"
+                >
+                  {customerReviews.length === 0 ? (
+                    <div className="bg-background rounded-xl p-8 shadow-sm border border-border text-center text-muted-foreground">
+                      No reviews yet. Be the first to review!
                     </div>
-
-                    {review.title && (
-                      <h5 className="font-semibold text-foreground mb-2">{review.title}</h5>
-                    )}
-                    <p className="text-foreground leading-relaxed mb-4">
-                      {review.review}
-                    </p>
-
-                    {review.photos && review.photos.length > 0 && (
-                      <div className="flex gap-2 mb-4">
-                        {review.photos.slice(0, 3).map((photo, photoIndex) => (
-                          <div
-                            key={photoIndex}
-                            className="w-20 h-20 rounded-lg overflow-hidden border border-border"
-                          >
-                            <img
-                              src={photo}
-                              alt={`Customer photo ${photoIndex + 1}`}
-                              className="w-full h-full object-cover"
-                            />
+                  ) : (
+                    customerReviews.map((review: any, index: number) => (
+                      <div
+                        key={index}
+                        className="bg-background rounded-xl p-6 shadow-sm border border-border"
+                      >
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xl font-semibold text-primary">
+                              {review.name.charAt(0).toUpperCase()}
+                            </span>
                           </div>
-                        ))}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-semibold text-foreground">
+                                {review.name}
+                              </h4>
+                              {review.verifiedPurchase && (
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                                  ✓ Verified Purchase
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 flex-wrap">
+                              <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded text-sm font-medium">
+                                {review.rating}★
+                              </div>
+                              <span className="text-sm text-muted-foreground">
+                                {review.date}
+                              </span>
+                              {review.productName && (
+                                <span className="text-xs text-muted-foreground italic">
+                                  {review.productName}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {review.title && (
+                          <h5 className="font-semibold text-foreground mb-2">{review.title}</h5>
+                        )}
+                        <p className="text-foreground leading-relaxed mb-4">
+                          {review.review}
+                        </p>
+
+                        {review.photos && review.photos.length > 0 && (
+                          <div className="flex gap-2 mb-4 flex-wrap">
+                            {review.photos.slice(0, 3).map((photo: string, photoIndex: number) => (
+                              <div
+                                key={photoIndex}
+                                onClick={() => setSelectedImage(photo)}
+                                className="w-20 h-20 rounded-lg overflow-hidden border border-border cursor-pointer hover:opacity-80 transition-opacity"
+                              >
+                                <img
+                                  src={photo}
+                                  alt={`Customer photo ${photoIndex + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <button className="flex items-center gap-1 text-sm hover:text-foreground transition-colors">
+                            <span>👍</span>
+                            <span>Helpful ({review.helpful})</span>
+                          </button>
+                        </div>
                       </div>
-                    )}
-
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <button className="flex items-center gap-1 text-sm hover:text-foreground transition-colors">
-                        <span>👍</span>
-                        <span>Helpful ({review.helpful})</span>
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-
-                {customerReviews.length > 4 && (
-                  <div className="flex justify-center pt-2">
-                    <button
-                      onClick={() => setShowAllReviews((prev) => !prev)}
-                      className="px-6 py-2.5 bg-primary text-white rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
-                      data-testid="button-toggle-reviews"
-                    >
-                      {showAllReviews ? "Show Less" : `View More Reviews (${customerReviews.length - 4} more)`}
-                    </button>
-                  </div>
+                    ))
+                  )}
+                </div>
+                {customerReviews.length > 0 && (
+                  <p className="text-xs text-muted-foreground text-center mt-3">
+                    Showing all {customerReviews.length} review{customerReviews.length !== 1 ? "s" : ""} · Scroll to read more
+                  </p>
                 )}
               </motion.div>
             </div>
