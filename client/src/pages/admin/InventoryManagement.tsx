@@ -434,18 +434,11 @@ export default function InventoryManagement() {
         : (fullProduct.images?.length ? fullProduct.images : (fullProduct.colorVariants?.[0]?.images || []));
 
       setEditingProduct(fullProduct);
-      setEditingVariantIndex(vIdx);
-      setUploadedImages(images);
+      setEditingVariantIndex(-1);
+      setUploadedImages([]);
       setEditNewSizeInput("");
       setEditNewSizeStock(0);
-      if (fullProduct.category === "BLOUSES") {
-        const variantBlouseSizes = activeVariant?.blouseSizes?.length
-          ? activeVariant.blouseSizes
-          : (Array.isArray(fullProduct.blouseSizes) ? fullProduct.blouseSizes : []);
-        setEditBlouseSizes(variantBlouseSizes);
-      } else {
-        setEditBlouseSizes([]);
-      }
+      setEditBlouseSizes([]);
       setProductForm({
         name: fullProduct.name || "",
         description: fullProduct.description || "",
@@ -456,17 +449,17 @@ export default function InventoryManagement() {
         category: fullProduct.category || "",
         subcategory: fullProduct.subcategory || "",
         fabric: fullProduct.fabric || "",
-        color: variantColor,
+        color: "",
         occasion: fullProduct.occasion || "",
         pattern: fullProduct.pattern || "",
         workType: fullProduct.workType || "",
         blousePiece: fullProduct.blousePiece || false,
         sareeLength: fullProduct.sareeLength || "",
-        stockQuantity: variantStock.toString(),
-        inStock: variantStock > 0,
-        isNew: activeVariant?.isNew ?? fullProduct.isNew ?? false,
-        isTrending: activeVariant?.isTrending ?? fullProduct.isTrending ?? false,
-        isBestseller: activeVariant?.isBestseller ?? fullProduct.isBestseller ?? false,
+        stockQuantity: "0",
+        inStock: fullProduct.inStock ?? true,
+        isNew: fullProduct.isNew ?? false,
+        isTrending: fullProduct.isTrending ?? false,
+        isBestseller: fullProduct.isBestseller ?? false,
         onSale: fullProduct.onSale || false,
         fabricComposition: fullProduct.specifications?.fabricComposition || "",
         dimensions: fullProduct.specifications?.dimensions || "",
@@ -499,68 +492,11 @@ export default function InventoryManagement() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    let colorVariants;
-    const newStockQty = parseInt(productForm.stockQuantity) || 0;
-    if (editingProduct) {
-      colorVariants = editingProduct.colorVariants || [{
-        color: productForm.color || 'Default',
-        images: uploadedImages.length > 0 ? uploadedImages : (editingProduct.images || [])
-      }];
 
-      if (editingVariantIndex >= 0 && colorVariants[editingVariantIndex]) {
-        // Only update the specific variant being edited — leave others unchanged
-        colorVariants = colorVariants.map((v: any, i: number) => {
-          if (i === editingVariantIndex) {
-            return {
-              ...v,
-              color: productForm.color || v.color,
-              stockQuantity: newStockQty,
-              inStock: newStockQty > 0,
-              images: uploadedImages.length > 0 ? uploadedImages : v.images,
-            };
-          }
-          return v;
-        });
-      } else {
-        // No specific variant — update images on first variant if provided
-        if (uploadedImages.length > 0 && productForm.color && colorVariants.length > 0) {
-          colorVariants[0] = {
-            ...colorVariants[0],
-            color: productForm.color,
-            images: uploadedImages,
-            stockQuantity: newStockQty,
-            inStock: newStockQty > 0,
-          };
-        }
-      }
-    } else {
-      colorVariants = [{
-        color: productForm.color || 'Default',
-        images: uploadedImages
-      }];
-    }
-
-    const isBlouseCategory = productForm.category === "BLOUSES";
-
-    // For blouses: inject per-variant blouseSizes and recompute variant stockQuantity
-    if (isBlouseCategory && editingVariantIndex >= 0 && colorVariants[editingVariantIndex]) {
-      const variantSizeStock = editBlouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
-      colorVariants = colorVariants.map((v: any, i: number) => {
-        if (i === editingVariantIndex) {
-          return {
-            ...v,
-            blouseSizes: editBlouseSizes,
-            stockQuantity: variantSizeStock,
-            inStock: variantSizeStock > 0,
-          };
-        }
-        return v;
-      });
-    }
-
+    // Preserve existing colorVariants unchanged — variants are managed via the variant editor
+    const colorVariants = editingProduct?.colorVariants || [];
     const totalVariantStock = colorVariants.reduce((sum: number, v: any) => sum + (v.stockQuantity || 0), 0);
-    const productLevelStock = colorVariants.length > 0 ? totalVariantStock : newStockQty;
+    const productLevelStock = totalVariantStock;
 
     const isJewellery = productForm.category === "JEWELLERY";
 
@@ -1368,84 +1304,78 @@ export default function InventoryManagement() {
                 />
               </div>
 
-              {productForm.category !== "BLOUSES" && (
+              <div className="space-y-2">
+                <Label data-testid="label-edit-stock-quantity">Total Stock (auto-computed from variants)</Label>
+                <div className="h-10 px-3 flex items-center rounded-md border bg-muted text-muted-foreground text-sm" data-testid="text-edit-stock-quantity">
+                  {(editingProduct?.colorVariants || []).reduce((sum: number, v: any) => sum + (v.stockQuantity || 0), 0)}
+                </div>
+              </div>
+            </div>
+
+            {productForm.category !== "JEWELLERY" && (
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-stockQuantity" data-testid="label-edit-stock-quantity">Stock Quantity</Label>
+                  <Label htmlFor="edit-fabric">Fabric</Label>
                   <Input
-                    id="edit-stockQuantity"
-                    type="number"
-                    value={productForm.stockQuantity}
-                    onChange={(e) => setProductForm({...productForm, stockQuantity: e.target.value})}
-                    data-testid="input-edit-stock-quantity"
+                    id="edit-fabric"
+                    value={productForm.fabric}
+                    onChange={(e) => setProductForm({...productForm, fabric: e.target.value})}
                   />
                 </div>
-              )}
-              {productForm.category === "BLOUSES" && (
+
                 <div className="space-y-2">
-                  <Label>Stock Quantity (auto-computed from sizes)</Label>
-                  <div className="h-10 px-3 flex items-center rounded-md border bg-muted text-muted-foreground text-sm">
-                    {editBlouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0)}
-                  </div>
+                  <Label htmlFor="edit-occasion">Occasion</Label>
+                  <Input
+                    id="edit-occasion"
+                    value={productForm.occasion}
+                    onChange={(e) => setProductForm({...productForm, occasion: e.target.value})}
+                  />
                 </div>
-              )}
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-fabric">Fabric</Label>
-                <Input
-                  id="edit-fabric"
-                  value={productForm.fabric}
-                  onChange={(e) => setProductForm({...productForm, fabric: e.target.value})}
-                />
-              </div>
+                {productForm.category === "SAREES" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-pattern">Pattern</Label>
+                      <Input
+                        id="edit-pattern"
+                        value={productForm.pattern}
+                        onChange={(e) => setProductForm({...productForm, pattern: e.target.value})}
+                      />
+                    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-occasion">Occasion</Label>
-                <Input
-                  id="edit-occasion"
-                  value={productForm.occasion}
-                  onChange={(e) => setProductForm({...productForm, occasion: e.target.value})}
-                />
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-workType">Work Type</Label>
+                      <Input
+                        id="edit-workType"
+                        value={productForm.workType}
+                        onChange={(e) => setProductForm({...productForm, workType: e.target.value})}
+                      />
+                    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-pattern">Pattern</Label>
-                <Input
-                  id="edit-pattern"
-                  value={productForm.pattern}
-                  onChange={(e) => setProductForm({...productForm, pattern: e.target.value})}
-                />
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-sareeLength">Saree Length</Label>
+                      <Input
+                        id="edit-sareeLength"
+                        value={productForm.sareeLength}
+                        onChange={(e) => setProductForm({...productForm, sareeLength: e.target.value})}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-workType">Work Type</Label>
-                <Input
-                  id="edit-workType"
-                  value={productForm.workType}
-                  onChange={(e) => setProductForm({...productForm, workType: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-sareeLength">Saree Length</Label>
-                <Input
-                  id="edit-sareeLength"
-                  value={productForm.sareeLength}
-                  onChange={(e) => setProductForm({...productForm, sareeLength: e.target.value})}
-                />
-              </div>
-            </div>
+            )}
 
             <div className="flex gap-6 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="edit-blousePiece"
-                  checked={productForm.blousePiece}
-                  onCheckedChange={(checked) => setProductForm({...productForm, blousePiece: checked as boolean})}
-                />
-                <Label htmlFor="edit-blousePiece">Blouse Piece</Label>
-              </div>
+              {productForm.category === "SAREES" && (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="edit-blousePiece"
+                    checked={productForm.blousePiece}
+                    onCheckedChange={(checked) => setProductForm({...productForm, blousePiece: checked as boolean})}
+                  />
+                  <Label htmlFor="edit-blousePiece">Blouse Piece</Label>
+                </div>
+              )}
 
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -1493,109 +1423,6 @@ export default function InventoryManagement() {
                 <Label htmlFor="edit-onSale" data-testid="label-edit-on-sale">On Sale</Label>
               </div>
             </div>
-
-            {/* Blouse Sizes (only shown for BLOUSES category) */}
-            {productForm.category === "BLOUSES" && (
-              <div className="border rounded-xl p-4 space-y-3 bg-pink-50/40">
-                <h3 className="font-semibold text-sm text-pink-700">Sizes & Stock for this Color Variant</h3>
-                <p className="text-xs text-muted-foreground">Edit each size's stock. Add or remove sizes as needed.</p>
-                <div className="flex gap-2 items-end flex-wrap">
-                  <div className="space-y-1 flex-1 min-w-[80px]">
-                    <Label className="text-xs">Size</Label>
-                    <Input
-                      placeholder="e.g. 32"
-                      value={editNewSizeInput}
-                      onChange={(e) => setEditNewSizeInput(e.target.value)}
-                      className="h-8"
-                    />
-                  </div>
-                  <div className="space-y-1 flex-1 min-w-[80px]">
-                    <Label className="text-xs">Stock Qty</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      placeholder="0"
-                      value={editNewSizeStock === 0 ? "" : editNewSizeStock}
-                      onChange={(e) => {
-                        const v = Math.floor(Number(e.target.value));
-                        setEditNewSizeStock(isNaN(v) ? 0 : Math.max(0, v));
-                      }}
-                      className="h-8"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8"
-                    onClick={() => {
-                      const trimmed = editNewSizeInput.trim();
-                      if (!trimmed) {
-                        toast({ title: "Enter a size", variant: "destructive" });
-                        return;
-                      }
-                      if (editBlouseSizes.some(s => s.size === trimmed)) {
-                        toast({ title: "Size already exists", variant: "destructive" });
-                        return;
-                      }
-                      setEditBlouseSizes(prev => [...prev, { size: trimmed, stockQuantity: editNewSizeStock }]);
-                      setEditNewSizeInput("");
-                      setEditNewSizeStock(0);
-                    }}
-                  >
-                    Add Size
-                  </Button>
-                </div>
-                {editBlouseSizes.length > 0 ? (
-                  <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-pink-100/60">
-                        <tr>
-                          <th className="text-left px-3 py-2 font-medium">Size</th>
-                          <th className="text-left px-3 py-2 font-medium">Stock</th>
-                          <th className="px-3 py-2"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {editBlouseSizes.map((s, i) => (
-                          <tr key={i} className="border-t">
-                            <td className="px-3 py-2 font-medium">{s.size}</td>
-                            <td className="px-3 py-2">
-                              <Input
-                                type="number"
-                                min="0"
-                                className="h-7 w-24"
-                                value={s.stockQuantity === 0 ? "" : s.stockQuantity}
-                                placeholder="0"
-                                onChange={(e) => {
-                                  const v = Math.floor(Number(e.target.value));
-                                  setEditBlouseSizes(prev => prev.map((item, idx) =>
-                                    idx === i ? { ...item, stockQuantity: isNaN(v) ? 0 : Math.max(0, v) } : item
-                                  ));
-                                }}
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <button
-                                type="button"
-                                className="text-red-500 hover:text-red-700 text-xs"
-                                onClick={() => setEditBlouseSizes(prev => prev.filter((_, idx) => idx !== i))}
-                              >
-                                Remove
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div className="px-3 py-2 bg-pink-50/60 text-xs text-pink-700 font-medium border-t">
-                      Total Stock: {editBlouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0)}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">No sizes configured yet. Add sizes above.</p>
-                )}
-              </div>
-            )}
 
             {productForm.category === "JEWELLERY" ? (
               <div className="space-y-4 border-t pt-4">
