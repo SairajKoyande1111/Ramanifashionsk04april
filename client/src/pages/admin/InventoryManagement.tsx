@@ -1262,90 +1262,9 @@ export default function InventoryManagement() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label data-testid="label-edit-product-images">Product Images (Max 5)</Label>
-              <div className="flex gap-2 flex-wrap">
-                {uploadedImages.map((url, index) => (
-                  <div key={index} className="relative group">
-                    <img 
-                      src={url} 
-                      alt={`Product ${index + 1}`}
-                      className="w-20 h-20 object-cover rounded-md"
-                      data-testid={`img-edit-uploaded-${index}`}
-                    />
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="destructive"
-                      className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100"
-                      onClick={() => removeImage(index)}
-                      data-testid={`button-edit-remove-image-${index}`}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              {uploadedImages.length < 5 && (
-                <Tabs defaultValue="device" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="device" data-testid="tab-edit-upload-device">
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload from Device
-                    </TabsTrigger>
-                    <TabsTrigger value="url" data-testid="tab-edit-upload-url">
-                      <LinkIcon className="mr-2 h-4 w-4" />
-                      Upload via Link
-                    </TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="device" className="space-y-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleImageUpload}
-                      data-testid="input-edit-file-upload-hidden"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploading}
-                      data-testid="button-edit-upload-images"
-                    >
-                      <Upload className="mr-2 h-4 w-4" />
-                      {isUploading ? "Uploading..." : "Upload Images"}
-                    </Button>
-                  </TabsContent>
-                  <TabsContent value="url" className="space-y-2">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Enter image URL"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            handleAddImageUrl();
-                          }
-                        }}
-                        data-testid="input-edit-image-url"
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleAddImageUrl}
-                        data-testid="button-edit-add-url"
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              )}
-            </div>
+            <p className="text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2 border border-border">
+              To edit images or colors, use the <strong>Edit Variant</strong> button on the specific color variant.
+            </p>
 
             <div className="space-y-2">
               <Label htmlFor="edit-name" data-testid="label-edit-product-name">Product Name *</Label>
@@ -1478,15 +1397,6 @@ export default function InventoryManagement() {
                   id="edit-fabric"
                   value={productForm.fabric}
                   onChange={(e) => setProductForm({...productForm, fabric: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-color">Color</Label>
-                <Input
-                  id="edit-color"
-                  value={productForm.color}
-                  onChange={(e) => setProductForm({...productForm, color: e.target.value})}
                 />
               </div>
 
