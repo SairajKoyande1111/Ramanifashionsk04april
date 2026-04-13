@@ -76,6 +76,12 @@ export default function InventoryManagement() {
   const [editBlouseSizes, setEditBlouseSizes] = useState<Array<{ size: string; stockQuantity: number }>>([]);
   const [editNewSizeInput, setEditNewSizeInput] = useState("");
   const [editNewSizeStock, setEditNewSizeStock] = useState(0);
+
+  const [isEditVariantDialogOpen, setIsEditVariantDialogOpen] = useState(false);
+  const [editVariantProductData, setEditVariantProductData] = useState<any>(null);
+  const [editVariantIndex, setEditVariantIndex] = useState<number>(-1);
+  const [isLoadingEditVariant, setIsLoadingEditVariant] = useState(false);
+  const [editVariantAllVariants, setEditVariantAllVariants] = useState<ColorVariant[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -300,6 +306,51 @@ export default function InventoryManagement() {
       setAddVariantProductId(null);
     } finally {
       setIsLoadingAddVariant(false);
+    }
+  };
+
+  const editColorVariantMutation = useMutation({
+    mutationFn: async ({ productId, variants }: { productId: string; variants: ColorVariant[] }) => {
+      const totalStock = variants.reduce((sum, v) => sum + (v.stockQuantity || 0), 0);
+      return apiRequest(`/api/admin/products/${productId}`, "PATCH", {
+        colorVariants: variants,
+        stockQuantity: totalStock,
+        inStock: totalStock > 0,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({ title: "Color variant updated successfully!" });
+      setIsEditVariantDialogOpen(false);
+      setEditVariantProductData(null);
+      setEditVariantIndex(-1);
+      setEditVariantAllVariants([]);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const handleOpenEditVariant = async (variant: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const vIdx = typeof variant.variantIndex === 'number' ? variant.variantIndex : 0;
+    setIsLoadingEditVariant(true);
+    setIsEditVariantDialogOpen(true);
+    setEditVariantIndex(vIdx);
+    setEditVariantAllVariants([]);
+    setEditVariantProductData(null);
+    try {
+      const response = await fetch(`/api/products/${variant._id}`);
+      if (!response.ok) throw new Error("Failed to fetch product");
+      const fullProduct = await response.json();
+      setEditVariantProductData(fullProduct);
+      setEditVariantAllVariants(fullProduct.colorVariants || []);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setIsEditVariantDialogOpen(false);
+    } finally {
+      setIsLoadingEditVariant(false);
     }
   };
 
@@ -594,15 +645,16 @@ export default function InventoryManagement() {
             : (isBlouse && Array.isArray(product.blouseSizes) && product.blouseSizes.length > 0 ? product.blouseSizes : []);
 
           if (isBlouse && variantBlouseSizes.length > 0) {
-            variantBlouseSizes.forEach((sizeEntry: any) => {
-              variantRows.push({
-                ...product,
-                variantColor: variant.color,
-                variantIndex: vIndex,
-                variantSize: sizeEntry.size,
-                stockQuantity: sizeEntry.stockQuantity ?? 0,
-                inStock: (sizeEntry.stockQuantity ?? 0) > 0,
-              });
+            const totalBlouseStock = variantBlouseSizes.reduce((s: number, x: any) => s + (x.stockQuantity || 0), 0);
+            variantRows.push({
+              ...product,
+              variantColor: variant.color,
+              variantColorHex: variant.colorHex,
+              variantIndex: vIndex,
+              variantSize: null,
+              variantBlouseSizes: variantBlouseSizes,
+              stockQuantity: totalBlouseStock,
+              inStock: totalBlouseStock > 0,
             });
           } else {
             variantRows.push({
@@ -1065,6 +1117,16 @@ export default function InventoryManagement() {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => { e.stopPropagation(); handleEdit(product); }}
+                                title="Edit Product Details"
+                                data-testid={`button-edit-product-${product._id}`}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 className="h-8 w-8 p-0 text-pink-600 border-pink-300 hover:bg-pink-50"
                                 onClick={(e) => handleOpenAddVariant(product, e)}
                                 title="Add Color Variant"
@@ -1091,9 +1153,7 @@ export default function InventoryManagement() {
                           const isLowStock = stockQuantity < 10 && stockQuantity > 0;
                           const isOutOfStock = !variant.inStock || stockQuantity === 0;
                           const variantKey = variant.variantColor
-                            ? (variant.variantSize
-                                ? `${variant._id}_${variant.variantIndex}_${variant.variantSize}`
-                                : `${variant._id}_${variant.variantIndex}`)
+                            ? `${variant._id}_${variant.variantIndex}`
                             : variant._id;
 
                           return (
@@ -1107,16 +1167,35 @@ export default function InventoryManagement() {
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="text-muted-foreground text-xs">↳</span>
                                   {variant.variantColor ? (
-                                    <span className="inline-block text-xs bg-white border border-border text-foreground px-2 py-0.5 rounded-full shadow-sm font-medium">
+                                    <span className="inline-flex items-center gap-1.5 text-xs bg-white border border-border text-foreground px-2 py-0.5 rounded-full shadow-sm font-medium">
+                                      {(variant.variantColorHex || variant.colorHex) && (
+                                        <span
+                                          className="w-3 h-3 rounded-full border border-gray-200 flex-shrink-0"
+                                          style={{ backgroundColor: variant.variantColorHex || variant.colorHex }}
+                                        />
+                                      )}
                                       {variant.variantColor}
                                     </span>
                                   ) : (
                                     <span className="text-muted-foreground text-xs">Default</span>
                                   )}
-                                  {variant.variantSize && (
-                                    <span className="inline-block text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
-                                      Size {variant.variantSize}
-                                    </span>
+                                  {variant.variantBlouseSizes && variant.variantBlouseSizes.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 ml-1">
+                                      {variant.variantBlouseSizes.map((s: any) => (
+                                        <span
+                                          key={s.size}
+                                          className={`inline-block text-xs px-1.5 py-0.5 rounded border font-medium ${
+                                            (s.stockQuantity || 0) === 0
+                                              ? "bg-red-50 text-red-600 border-red-200"
+                                              : (s.stockQuantity || 0) < 10
+                                              ? "bg-orange-50 text-orange-700 border-orange-200"
+                                              : "bg-blue-50 text-blue-700 border-blue-200"
+                                          }`}
+                                        >
+                                          {s.size}: {s.stockQuantity ?? 0}
+                                        </span>
+                                      ))}
+                                    </div>
                                   )}
                                 </div>
                               </TableCell>
@@ -1140,7 +1219,7 @@ export default function InventoryManagement() {
                                     variant="outline"
                                     size="sm"
                                     className="h-8 w-8 p-0"
-                                    onClick={() => handleEdit(variant)}
+                                    onClick={(e) => handleOpenEditVariant(variant, e)}
                                     data-testid={`button-edit-variant-${variantKey}`}
                                   >
                                     <Pencil className="h-3.5 w-3.5" />
@@ -1841,6 +1920,77 @@ export default function InventoryManagement() {
                   data-testid="button-add-variant-submit"
                 >
                   {addColorVariantMutation.isPending ? "Saving..." : `Add ${addVariantNewVariants.length > 0 ? addVariantNewVariants.length : ""} Color Variant${addVariantNewVariants.length !== 1 ? "s" : ""}`}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditVariantDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsEditVariantDialogOpen(false);
+          setEditVariantProductData(null);
+          setEditVariantIndex(-1);
+          setEditVariantAllVariants([]);
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-screen overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle data-testid="text-edit-variant-dialog-title">
+              Edit Color Variant
+              {editVariantProductData && (
+                <span className="text-muted-foreground font-normal text-base ml-2">
+                  — {editVariantProductData.name}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {isLoadingEditVariant ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading variant...</p>
+              </div>
+            </div>
+          ) : editVariantProductData && editVariantAllVariants.length > 0 ? (
+            <div className="space-y-4">
+              <ColorVariantEditor
+                key={`edit-variant-${editVariantProductData._id}-${editVariantIndex}`}
+                variants={editVariantAllVariants}
+                onChange={setEditVariantAllVariants}
+                availableColors={AVAILABLE_COLORS}
+                adminToken={adminToken}
+                isBlouse={editVariantProductData.category === "BLOUSES"}
+                defaultEditIndex={editVariantIndex}
+              />
+              <div className="flex justify-end gap-3 pt-2 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditVariantDialogOpen(false);
+                    setEditVariantProductData(null);
+                    setEditVariantIndex(-1);
+                    setEditVariantAllVariants([]);
+                  }}
+                  data-testid="button-edit-variant-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={editColorVariantMutation.isPending}
+                  onClick={() => {
+                    if (!editVariantProductData) return;
+                    editColorVariantMutation.mutate({
+                      productId: editVariantProductData._id,
+                      variants: editVariantAllVariants,
+                    });
+                  }}
+                  data-testid="button-edit-variant-submit"
+                >
+                  {editColorVariantMutation.isPending ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </div>

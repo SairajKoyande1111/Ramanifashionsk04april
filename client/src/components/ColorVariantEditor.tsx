@@ -33,27 +33,39 @@ interface ColorVariantEditorProps {
   availableColors: string[];
   adminToken: string | null;
   isBlouse?: boolean;
+  defaultEditIndex?: number;
 }
 
-export function ColorVariantEditor({ variants, onChange, availableColors, adminToken, isBlouse = false }: ColorVariantEditorProps) {
+export function ColorVariantEditor({ variants, onChange, availableColors, adminToken, isBlouse = false, defaultEditIndex }: ColorVariantEditorProps) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null, null]);
+
+  const defaultVariant = (defaultEditIndex !== undefined && defaultEditIndex >= 0 && variants[defaultEditIndex])
+    ? variants[defaultEditIndex]
+    : null;
+
+  const buildDefaultImages = (v: ColorVariant | null) => {
+    if (!v) return ["", "", "", "", ""];
+    const imgs = [...v.images];
+    while (imgs.length < 5) imgs.push("");
+    return imgs.slice(0, 5);
+  };
   
-  const [selectedColor, setSelectedColor] = useState<string>("");
-  const [selectedColorHex, setSelectedColorHex] = useState<string>("#ff0000");
-  const [currentImages, setCurrentImages] = useState<string[]>(["", "", "", "", ""]);
-  const [stockQuantity, setStockQuantity] = useState<number>(0);
-  const [inStock, setInStock] = useState<boolean>(true);
+  const [selectedColor, setSelectedColor] = useState<string>(defaultVariant?.color ?? "");
+  const [selectedColorHex, setSelectedColorHex] = useState<string>(defaultVariant?.colorHex ?? "#ff0000");
+  const [currentImages, setCurrentImages] = useState<string[]>(buildDefaultImages(defaultVariant));
+  const [stockQuantity, setStockQuantity] = useState<number>(defaultVariant?.stockQuantity ?? 0);
+  const [inStock, setInStock] = useState<boolean>(defaultVariant?.inStock ?? true);
   const [isUploading, setIsUploading] = useState<boolean[]>([false, false, false, false, false]);
   const [uploadFailed, setUploadFailed] = useState<boolean[]>([false, false, false, false, false]);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(defaultEditIndex !== undefined && defaultEditIndex >= 0 ? defaultEditIndex : null);
   const [showColorSuggestions, setShowColorSuggestions] = useState(false);
 
-  const [variantIsNew, setVariantIsNew] = useState<boolean>(false);
-  const [variantIsBestseller, setVariantIsBestseller] = useState<boolean>(false);
-  const [variantIsTrending, setVariantIsTrending] = useState<boolean>(false);
+  const [variantIsNew, setVariantIsNew] = useState<boolean>(defaultVariant?.isNew ?? false);
+  const [variantIsBestseller, setVariantIsBestseller] = useState<boolean>(defaultVariant?.isBestseller ?? false);
+  const [variantIsTrending, setVariantIsTrending] = useState<boolean>(defaultVariant?.isTrending ?? false);
 
-  const [blouseSizes, setBlouseSizes] = useState<BlouseSize[]>([]);
+  const [blouseSizes, setBlouseSizes] = useState<BlouseSize[]>(defaultVariant?.blouseSizes ? [...defaultVariant.blouseSizes] : []);
   const [newSizeInput, setNewSizeInput] = useState("");
   const [newSizeStock, setNewSizeStock] = useState(0);
 
