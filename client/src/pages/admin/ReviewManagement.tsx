@@ -72,6 +72,7 @@ interface Review {
   comment: string;
   verifiedPurchase: boolean;
   helpful: number;
+  photos?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -519,9 +520,11 @@ export default function ReviewManagement() {
                                       </Badge>
                                     )}
                                   </div>
-                                  <p className="text-xs text-muted-foreground">
-                                    {review.productId?.category} • ₹{review.productId?.price?.toLocaleString()}
-                                  </p>
+                                  {review.productId?.category && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {review.productId.category}
+                                    </p>
+                                  )}
                                 </div>
 
                                 <div className="flex flex-col items-end gap-2">
@@ -557,6 +560,28 @@ export default function ReviewManagement() {
                                   {review.comment}
                                 </p>
                               </div>
+
+                              {/* Review Photos */}
+                              {review.photos && review.photos.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                  {review.photos.map((photo, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={photo}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block"
+                                    >
+                                      <img
+                                        src={photo}
+                                        alt={`Review photo ${idx + 1}`}
+                                        className="w-20 h-20 object-cover rounded-lg border border-pink-100 dark:border-gray-700 hover:opacity-80 transition-opacity cursor-pointer"
+                                        data-testid={`img-review-photo-${review._id}-${idx}`}
+                                      />
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
 
                               {/* Customer Info */}
                               <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-3">
