@@ -373,7 +373,7 @@ export default function Header({ cartCount = 0, wishlistCount = 0, onMenuClick }
               <img 
                 src={logoImage}
                 alt="Ramani Fashion" 
-                className="h-12 md:h-14 lg:h-16 w-auto object-contain"
+                className="h-14 md:h-16 lg:h-20 w-auto object-contain"
                 data-testid="img-logo"
               />
             </Link>
