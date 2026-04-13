@@ -1,48 +1,145 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+interface BannerItem {
+  _id: string;
+  url: string;
+  order: number;
+}
+
+interface HeroBannersData {
+  desktop: BannerItem[];
+  mobile: BannerItem[];
+}
 
 export default function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [heroImage, setHeroImage] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [legacyDesktop, setLegacyDesktop] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     const cacheBust = Date.now();
     const img = new Image();
-    img.onload = () => setHeroImage(`/media/hero-banner.png?t=${cacheBust}`);
+    img.onload = () => setLegacyDesktop(`/media/hero-banner.png?t=${cacheBust}`);
     img.src = `/media/hero-banner.png?t=${cacheBust}`;
   }, []);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % 1);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, []);
+  const { data: bannersData } = useQuery<HeroBannersData>({
+    queryKey: ["/api/hero-banners"],
+  });
 
-  if (!heroImage) {
+  const desktopSlides = bannersData?.desktop ?? [];
+  const mobileSlides = bannersData?.mobile ?? [];
+
+  const slides: string[] = isMobile
+    ? mobileSlides.length > 0
+      ? mobileSlides.map((b) => b.url)
+      : legacyDesktop
+      ? [legacyDesktop]
+      : []
+    : desktopSlides.length > 0
+    ? desktopSlides.map((b) => b.url)
+    : legacyDesktop
+    ? [legacyDesktop]
+    : [];
+
+  const totalSlides = slides.length;
+
+  const goNext = useCallback(() => {
+    setCurrentSlide((prev) => (prev + 1) % totalSlides);
+  }, [totalSlides]);
+
+  const goPrev = useCallback(() => {
+    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+  }, [totalSlides]);
+
+  useEffect(() => {
+    if (totalSlides <= 1) return;
+    const timer = setInterval(goNext, 5000);
+    return () => clearInterval(timer);
+  }, [totalSlides, goNext]);
+
+  useEffect(() => {
+    setCurrentSlide(0);
+  }, [isMobile]);
+
+  if (slides.length === 0) {
     return (
       <div
         className="w-full bg-pink-50"
-        style={{ height: "55vh", maxHeight: "500px" }}
+        style={
+          isMobile
+            ? { height: "70vw", maxHeight: "600px" }
+            : { height: "55vh", maxHeight: "500px" }
+        }
       />
     );
   }
 
+  const containerStyle = isMobile
+    ? { height: "70vw", maxHeight: "600px", backgroundColor: "#fff" }
+    : { height: "55vh", maxHeight: "500px", backgroundColor: "#fff" };
+
   return (
-    <div
-      className="relative w-full overflow-hidden"
-      style={{ height: "55vh", maxHeight: "500px", backgroundColor: "#fff" }}
-    >
-      <div className="absolute inset-0">
-        <div className="relative h-full w-full">
+    <div className="relative w-full overflow-hidden" style={containerStyle}>
+      {slides.map((src, index) => (
+        <div
+          key={src}
+          className="absolute inset-0 transition-opacity duration-700"
+          style={{ opacity: index === currentSlide ? 1 : 0, zIndex: index === currentSlide ? 1 : 0 }}
+        >
           <img
-            src={heroImage}
-            alt="Ramani Fashion Banner"
+            src={src}
+            alt={`Ramani Fashion Banner ${index + 1}`}
             className="w-full h-full object-cover object-center"
-            data-testid="img-hero-banner-0"
+            data-testid={`img-hero-banner-${index}`}
             style={{ display: "block" }}
           />
         </div>
-      </div>
+      ))}
+
+      {totalSlides > 1 && (
+        <>
+          <button
+            onClick={goPrev}
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center transition-colors"
+            data-testid="button-hero-prev"
+            aria-label="Previous banner"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={goNext}
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center transition-colors"
+            data-testid="button-hero-next"
+            aria-label="Next banner"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-2">
+            {slides.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  index === currentSlide ? "bg-white w-5" : "bg-white/60"
+                }`}
+                data-testid={`button-hero-dot-${index}`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

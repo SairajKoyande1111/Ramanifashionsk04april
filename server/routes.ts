@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { connectDB } from "./db";
-import { Product, User, Customer, Cart, Wishlist, Order, Address, ContactSubmission, OTP, Review, Settings, AdminUser, Category } from "./models";
+import { Product, User, Customer, Cart, Wishlist, Order, Address, ContactSubmission, OTP, Review, HeroBanner, Settings, AdminUser, Category } from "./models";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -588,6 +588,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Review Routes
+  app.get("/api/reviews/homepage", async (req, res) => {
+    try {
+      const allReviews = await Review.find({}).select('rating').lean();
+      const totalReviews = allReviews.length;
+      const overall = totalReviews > 0
+        ? allReviews.reduce((s: number, r: any) => s + r.rating, 0) / totalReviews
+        : 0;
+      const breakdown = [5, 4, 3, 2, 1].map(stars => {
+        const count = allReviews.filter((r: any) => r.rating === stars).length;
+        return { stars, count, percentage: totalReviews > 0 ? Math.round((count / totalReviews) * 100) : 0 };
+      });
+
+      const reviews = await Review.find({})
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .populate('productId', 'name images')
+        .lean();
+
+      const customerPhotos = reviews
+        .filter((r: any) => r.photos && r.photos.length > 0)
+        .flatMap((r: any) => r.photos)
+        .slice(0, 12);
+
+      res.json({
+        reviews,
+        stats: {
+          overall: Math.round(overall * 10) / 10,
+          totalReviews,
+          totalRatings: totalReviews,
+          breakdown,
+        },
+        customerPhotos,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/reviews/:productId", async (req, res) => {
     try {
       const { productId } = req.params;
@@ -679,6 +717,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderStatus: { $in: ['delivered'] }
       });
       
+      const { photos } = req.body;
       const review = new Review({
         productId,
         customerId,
@@ -686,7 +725,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rating,
         title,
         comment,
-        verifiedPurchase: !!hasPurchased
+        verifiedPurchase: !!hasPurchased,
+        photos: Array.isArray(photos) ? photos : [],
       });
       
       await review.save();
@@ -3929,6 +3969,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({ success: true, message: 'Review deleted successfully' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/reviews", authenticateAdmin, async (req, res) => {
+    try {
+      const { productId, customerName, rating, title, comment, verifiedPurchase, photos } = req.body;
+      if (!productId || !customerName || !rating || !title || !comment) {
+        return res.status(400).json({ error: 'productId, customerName, rating, title, and comment are required' });
+      }
+      if (rating < 1 || rating > 5) {
+        return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+      }
+      const product = await Product.findById(productId);
+      if (!product) return res.status(404).json({ error: 'Product not found' });
+
+      const review = new Review({
+        productId,
+        customerName,
+        rating: Number(rating),
+        title,
+        comment,
+        verifiedPurchase: !!verifiedPurchase,
+        photos: Array.isArray(photos) ? photos : [],
+        adminCreated: true,
+      });
+      await review.save();
+      res.status(201).json(review);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Hero Banner Routes
+  app.get("/api/hero-banners", async (req, res) => {
+    try {
+      const banners = await HeroBanner.find({}).sort({ type: 1, order: 1 }).lean();
+      const desktop = banners.filter((b: any) => b.type === 'desktop').map((b: any) => ({
+        _id: b._id,
+        url: `/media/hero-banners/${b.filename}`,
+        order: b.order,
+      }));
+      const mobile = banners.filter((b: any) => b.type === 'mobile').map((b: any) => ({
+        _id: b._id,
+        url: `/media/hero-banners/${b.filename}`,
+        order: b.order,
+      }));
+      res.json({ desktop, mobile });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/admin/hero-banners/upload", authenticateAdmin, (req, res) => {
+    mediaUpload.fields([
+      { name: 'image', maxCount: 1 },
+    ])(req, res, async (err: any) => {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: err.message });
+      } else if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      try {
+        const files = req.files as any;
+        const type = req.body.type as string;
+        if (!type || !['desktop', 'mobile'].includes(type)) {
+          return res.status(400).json({ error: 'type must be desktop or mobile' });
+        }
+        if (!files.image || !files.image[0]) {
+          return res.status(400).json({ error: 'No image provided' });
+        }
+
+        const heroBannersDir = 'public/media/hero-banners';
+        if (!fs.existsSync(heroBannersDir)) {
+          fs.mkdirSync(heroBannersDir, { recursive: true });
+        }
+
+        const ext = path.extname(files.image[0].originalname).toLowerCase() || '.png';
+        const filename = `${type}-${Date.now()}${ext}`;
+        const destPath = `${heroBannersDir}/${filename}`;
+        fs.copyFileSync(files.image[0].path, destPath);
+        fs.unlinkSync(files.image[0].path);
+
+        const count = await HeroBanner.countDocuments({ type });
+        const banner = new HeroBanner({ type, filename, order: count });
+        await banner.save();
+
+        res.json({ success: true, banner: { _id: banner._id, url: `/media/hero-banners/${filename}`, order: banner.order } });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+  });
+
+  app.delete("/api/admin/hero-banners/:id", authenticateAdmin, async (req, res) => {
+    try {
+      const banner = await HeroBanner.findByIdAndDelete(req.params.id);
+      if (!banner) return res.status(404).json({ error: 'Banner not found' });
+
+      const filePath = `public/media/hero-banners/${banner.filename}`;
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

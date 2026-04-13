@@ -225,65 +225,41 @@ export default function Home() {
     },
   ];
 
-  const ratingStats = {
-    overall: 4.5,
-    totalReviews: 2847,
-    totalRatings: 3156,
+  const { data: homepageReviewsData } = useQuery<any>({
+    queryKey: ["/api/reviews/homepage"],
+  });
+
+  const homepageReviews: any[] = homepageReviewsData?.reviews || [];
+  const homepageStats = homepageReviewsData?.stats;
+  const homepagePhotos: string[] = homepageReviewsData?.customerPhotos || [];
+
+  const ratingStats = homepageStats || {
+    overall: 0,
+    totalReviews: 0,
+    totalRatings: 0,
     breakdown: [
-      { stars: 5, count: 1890, percentage: 60 },
-      { stars: 4, count: 823, percentage: 26 },
-      { stars: 3, count: 284, percentage: 9 },
-      { stars: 2, count: 95, percentage: 3 },
-      { stars: 1, count: 64, percentage: 2 },
+      { stars: 5, count: 0, percentage: 0 },
+      { stars: 4, count: 0, percentage: 0 },
+      { stars: 3, count: 0, percentage: 0 },
+      { stars: 2, count: 0, percentage: 0 },
+      { stars: 1, count: 0, percentage: 0 },
     ],
   };
 
-  const customerPhotos = [
-    bridalImage,
-    designerImage,
-    festiveImage,
-    partyImage,
-    cottonImage,
-    casualImage,
-    banarasiImage,
-    paithaniImage,
-    khunIrkalImage,
-    bridalImage,
-    festiveImage,
-    partyImage,
-  ];
+  const customerPhotos: string[] = homepagePhotos;
 
-  const customerReviews = [
-    {
-      name: "Priya Sharma",
-      image: customerImage,
-      rating: 5,
-      review:
-        "Absolutely stunning saree! The quality is exceptional and the colors are even more beautiful in person. The fabric feels luxurious and drapes perfectly.",
-      date: "15 Oct 2025",
-      helpful: 24,
-      photos: [bridalImage, designerImage, festiveImage],
-    },
-    {
-      name: "Anjali Reddy",
-      rating: 5,
-      review:
-        "Perfect for my sister's wedding. Got so many compliments! The fabric quality is amazing and the color is exactly as shown in pictures.",
-      date: "8 Oct 2025",
-      helpful: 18,
-      photos: [partyImage, cottonImage],
-    },
-    {
-      name: "Meera Patel",
-      image: customerImage,
-      rating: 5,
-      review:
-        "Beautiful collection and fast delivery. The saree exceeded my expectations. Will definitely shop again from Ramani Fashion!",
-      date: "2 Oct 2025",
-      helpful: 31,
-      photos: [casualImage],
-    },
-  ];
+  const customerReviews = homepageReviews.map((r: any) => ({
+    _id: r._id,
+    name: r.customerName,
+    rating: r.rating,
+    review: r.comment,
+    title: r.title,
+    date: new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    helpful: r.helpful || 0,
+    photos: r.photos || [],
+    verifiedPurchase: r.verifiedPurchase,
+    productName: r.productId?.name,
+  }));
 
   const fadeInUp = {
     hidden: { opacity: 0, y: 30 },
@@ -960,33 +936,40 @@ export default function Home() {
                   >
                     <div className="flex items-start gap-4 mb-4">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
-                        {review.image ? (
-                          <img
-                            src={review.image}
-                            alt={review.name}
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-xl font-semibold text-primary">
-                            {review.name.charAt(0)}
-                          </span>
-                        )}
+                        <span className="text-xl font-semibold text-primary">
+                          {review.name.charAt(0).toUpperCase()}
+                        </span>
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-foreground">
-                          {review.name}
-                        </h4>
-                        <div className="flex items-center gap-3 mt-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-semibold text-foreground">
+                            {review.name}
+                          </h4>
+                          {review.verifiedPurchase && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                              ✓ Verified Purchase
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 flex-wrap">
                           <div className="flex items-center gap-1 bg-green-600 text-white px-2 py-0.5 rounded text-sm font-medium">
                             {review.rating}★
                           </div>
                           <span className="text-sm text-muted-foreground">
-                            Posted on {review.date}
+                            {review.date}
                           </span>
+                          {review.productName && (
+                            <span className="text-xs text-muted-foreground italic">
+                              {review.productName}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
 
+                    {review.title && (
+                      <h5 className="font-semibold text-foreground mb-2">{review.title}</h5>
+                    )}
                     <p className="text-foreground leading-relaxed mb-4">
                       {review.review}
                     </p>

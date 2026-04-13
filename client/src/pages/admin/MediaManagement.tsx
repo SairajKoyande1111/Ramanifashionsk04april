@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import AdminLayout from "@/components/AdminLayout";
@@ -7,18 +7,239 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Upload, Check } from "lucide-react";
+import { AlertCircle, Upload, Check, Trash2, Monitor, Smartphone, Image } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface BannerItem {
+  _id: string;
+  url: string;
+  order: number;
+}
+
+interface HeroBannersData {
+  desktop: BannerItem[];
+  mobile: BannerItem[];
+}
+
+function CarouselUploadSection({
+  type,
+  label,
+  description,
+  icon: Icon,
+  aspectHint,
+}: {
+  type: "desktop" | "mobile";
+  label: string;
+  description: string;
+  icon: React.ElementType;
+  aspectHint: string;
+}) {
+  const { toast } = useToast();
+  const adminToken = localStorage.getItem("adminToken");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const { data: bannersData, isLoading } = useQuery<HeroBannersData>({
+    queryKey: ["/api/hero-banners"],
+  });
+
+  const slides = type === "desktop" ? (bannersData?.desktop ?? []) : (bannersData?.mobile ?? []);
+
+  const uploadMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await fetch("/api/admin/hero-banners/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${adminToken}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Upload failed");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: `${label} image uploaded!` });
+      setSelectedFile(null);
+      setPreview(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/hero-banners"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Upload error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) =>
+      apiRequest(`/api/admin/hero-banners/${id}`, "DELETE"),
+    onSuccess: () => {
+      toast({ title: "Banner removed" });
+      setDeleteId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/hero-banners"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Delete error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please select an image file", variant: "destructive" });
+      return;
+    }
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpload = () => {
+    if (!selectedFile) return;
+    const formData = new FormData();
+    formData.append("image", selectedFile);
+    formData.append("type", type);
+    uploadMutation.mutate(formData);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Icon className="h-5 w-5 text-pink-600" />
+          {label}
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : slides.length > 0 ? (
+          <div>
+            <p className="text-sm font-medium mb-3">Current Slides ({slides.length})</p>
+            <div className={`grid gap-3 ${type === "mobile" ? "grid-cols-3 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"}`}>
+              {slides.map((slide, index) => (
+                <div key={slide._id} className="relative group rounded-lg overflow-hidden border border-border">
+                  <img
+                    src={`${slide.url}?t=${Date.now()}`}
+                    alt={`${label} ${index + 1}`}
+                    className={`w-full object-cover ${type === "mobile" ? "aspect-[9/16]" : "aspect-video"}`}
+                    data-testid={`img-${type}-banner-${index}`}
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setDeleteId(slide._id)}
+                      data-testid={`button-delete-${type}-${index}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+                    #{index + 1}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+            <Image className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">No {type} banners uploaded yet</p>
+          </div>
+        )}
+
+        <div className="border-t pt-4 space-y-3">
+          <p className="text-sm font-medium">Add New Slide</p>
+          <p className="text-xs text-muted-foreground">{aspectHint}</p>
+          {preview && (
+            <div className="p-2 bg-muted rounded-lg">
+              <img
+                src={preview}
+                alt="Preview"
+                className={`mx-auto object-cover rounded ${type === "mobile" ? "max-h-40 max-w-24" : "max-h-32 max-w-full"}`}
+              />
+              <p className="text-xs text-muted-foreground mt-1">{selectedFile?.name}</p>
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <Label
+              htmlFor={`carousel-${type}`}
+              className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-200 rounded-md hover:bg-pink-200 dark:hover:bg-pink-800 text-sm"
+            >
+              <Upload className="h-4 w-4" />
+              Choose Image
+            </Label>
+            <input
+              id={`carousel-${type}`}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+              data-testid={`input-${type}-carousel-image`}
+            />
+            {selectedFile && (
+              <>
+                <Check className="h-5 w-5 text-green-600" />
+                <Button
+                  size="sm"
+                  onClick={handleUpload}
+                  disabled={uploadMutation.isPending}
+                  data-testid={`button-upload-${type}-carousel`}
+                >
+                  {uploadMutation.isPending ? "Uploading..." : "Upload Slide"}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </CardContent>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Banner Slide?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this slide from the {type} carousel. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-delete-banner"
+            >
+              Remove Slide
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
+  );
+}
 
 export default function MediaManagement() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const adminToken = localStorage.getItem("adminToken");
 
-  const [heroFile, setHeroFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [previewHero, setPreviewHero] = useState<string | null>(null);
   const [previewBanner, setPreviewBanner] = useState<string | null>(null);
   const [previewVideo, setPreviewVideo] = useState<string | null>(null);
 
@@ -35,10 +256,8 @@ export default function MediaManagement() {
         title: "Media uploaded successfully!",
         description: "Homepage media has been updated.",
       });
-      setHeroFile(null);
       setBannerFile(null);
       setVideoFile(null);
-      setPreviewHero(null);
       setPreviewBanner(null);
       setPreviewVideo(null);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/media"] });
@@ -52,33 +271,11 @@ export default function MediaManagement() {
     },
   });
 
-  const handleHeroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        toast({
-          title: "Invalid file",
-          description: "Hero banner must be an image file",
-          variant: "destructive",
-        });
-        return;
-      }
-      setHeroFile(file);
-      const reader = new FileReader();
-      reader.onload = (event) => setPreviewHero(event.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        toast({
-          title: "Invalid file",
-          description: "Banner must be an image file",
-          variant: "destructive",
-        });
+        toast({ title: "Invalid file", description: "Banner must be an image file", variant: "destructive" });
         return;
       }
       setBannerFile(file);
@@ -92,11 +289,7 @@ export default function MediaManagement() {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith("video/")) {
-        toast({
-          title: "Invalid file",
-          description: "Video must be a video file",
-          variant: "destructive",
-        });
+        toast({ title: "Invalid file", description: "Video must be a video file", variant: "destructive" });
         return;
       }
       setVideoFile(file);
@@ -108,21 +301,13 @@ export default function MediaManagement() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!heroFile && !bannerFile && !videoFile) {
-      toast({
-        title: "No files selected",
-        description: "Please select at least one file to upload",
-        variant: "destructive",
-      });
+    if (!bannerFile && !videoFile) {
+      toast({ title: "No files selected", description: "Please select at least one file to upload", variant: "destructive" });
       return;
     }
-
     const formData = new FormData();
-    if (heroFile) formData.append("hero", heroFile);
     if (bannerFile) formData.append("banner", bannerFile);
     if (videoFile) formData.append("video", videoFile);
-
     uploadMutation.mutate(formData);
   };
 
@@ -135,142 +320,123 @@ export default function MediaManagement() {
               Update Images & Video
             </h2>
             <p className="text-muted-foreground">
-              Manage homepage hero section, banner image, and promotional video
+              Manage homepage hero carousel banners (desktop & mobile), branding banner, and promotional video
             </p>
           </div>
 
           <Alert className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Please ensure your images match the required dimensions to avoid display issues on the homepage
+              Hero carousel: Add multiple slides for desktop and mobile independently. The website will automatically show the correct version based on the visitor's device.
             </AlertDescription>
           </Alert>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Hero Banner Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Hero Banner</CardTitle>
-                <CardDescription>
-                  Full-width banner at the top of the homepage. Recommended: Full HD landscape (1920x1080 or wider)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {previewHero && (
-                  <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                    <img src={previewHero} alt="Hero preview" className="max-h-64 mx-auto" />
-                    <p className="text-sm text-muted-foreground mt-2">{heroFile?.name}</p>
-                  </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="hero" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-200 rounded-md hover:bg-pink-200 dark:hover:bg-pink-800">
-                    <Upload className="h-4 w-4" />
-                    Choose Hero Image
-                  </Label>
-                  <input
-                    id="hero"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleHeroChange}
-                    className="hidden"
-                    data-testid="input-hero-image"
-                  />
-                  {heroFile && <Check className="h-5 w-5 text-green-600" />}
-                </div>
-              </CardContent>
-            </Card>
+          <div className="space-y-6">
+            <CarouselUploadSection
+              type="desktop"
+              label="Desktop Hero Carousel"
+              description="Landscape images shown on tablets and desktops. Each uploaded image becomes a carousel slide."
+              icon={Monitor}
+              aspectHint="Recommended: 1920×1080 (16:9 landscape). Upload one image at a time to add slides."
+            />
 
-            {/* Banner Image Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Ramani Fashion Banner</CardTitle>
-                <CardDescription>
-                  Central branding banner section. Recommended: 1200x600 or similar aspect ratio
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {previewBanner && (
-                  <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                    <img src={previewBanner} alt="Banner preview" className="max-h-64 mx-auto" />
-                    <p className="text-sm text-muted-foreground mt-2">{bannerFile?.name}</p>
-                  </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="banner" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-200 rounded-md hover:bg-pink-200 dark:hover:bg-pink-800">
-                    <Upload className="h-4 w-4" />
-                    Choose Banner Image
-                  </Label>
-                  <input
-                    id="banner"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleBannerChange}
-                    className="hidden"
-                    data-testid="input-banner-image"
-                  />
-                  {bannerFile && <Check className="h-5 w-5 text-green-600" />}
-                </div>
-              </CardContent>
-            </Card>
+            <CarouselUploadSection
+              type="mobile"
+              label="Mobile Hero Carousel"
+              description="Portrait images shown on mobile phones. Each uploaded image becomes a carousel slide."
+              icon={Smartphone}
+              aspectHint="Recommended: 9:16 portrait format (e.g. 1080×1920). Upload one image at a time to add slides."
+            />
 
-            {/* Video Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Promotional Video</CardTitle>
-                <CardDescription>
-                  Featured video on the homepage. Supports MP4, WebM, and other video formats
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {previewVideo && (
-                  <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                    <video src={previewVideo} className="max-h-64 mx-auto" controls />
-                    <p className="text-sm text-muted-foreground mt-2">{videoFile?.name}</p>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ramani Fashion Banner</CardTitle>
+                  <CardDescription>
+                    Central branding banner section. Recommended: 1200×600 or similar aspect ratio
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {previewBanner && (
+                    <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-700 rounded">
+                      <img src={previewBanner} alt="Banner preview" className="max-h-64 mx-auto" />
+                      <p className="text-sm text-muted-foreground mt-2">{bannerFile?.name}</p>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="banner" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-200 rounded-md hover:bg-pink-200 dark:hover:bg-pink-800">
+                      <Upload className="h-4 w-4" />
+                      Choose Banner Image
+                    </Label>
+                    <input
+                      id="banner"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleBannerChange}
+                      className="hidden"
+                      data-testid="input-banner-image"
+                    />
+                    {bannerFile && <Check className="h-5 w-5 text-green-600" />}
                   </div>
-                )}
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="video" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-200 rounded-md hover:bg-pink-200 dark:hover:bg-pink-800">
-                    <Upload className="h-4 w-4" />
-                    Choose Video File
-                  </Label>
-                  <input
-                    id="video"
-                    type="file"
-                    accept="video/*"
-                    onChange={handleVideoChange}
-                    className="hidden"
-                    data-testid="input-video-file"
-                  />
-                  {videoFile && <Check className="h-5 w-5 text-green-600" />}
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <div className="flex gap-4">
-              <Button
-                type="submit"
-                disabled={uploadMutation.isPending || (!heroFile && !bannerFile && !videoFile)}
-                data-testid="button-upload-media"
-              >
-                {uploadMutation.isPending ? "Uploading..." : "Upload Media"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setHeroFile(null);
-                  setBannerFile(null);
-                  setVideoFile(null);
-                  setPreviewHero(null);
-                  setPreviewBanner(null);
-                  setPreviewVideo(null);
-                }}
-                data-testid="button-cancel-upload"
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Promotional Video</CardTitle>
+                  <CardDescription>
+                    Featured video on the homepage. Supports MP4, WebM, and other video formats
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {previewVideo && (
+                    <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-700 rounded">
+                      <video src={previewVideo} className="max-h-64 mx-auto" controls />
+                      <p className="text-sm text-muted-foreground mt-2">{videoFile?.name}</p>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="video" className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-200 rounded-md hover:bg-pink-200 dark:hover:bg-pink-800">
+                      <Upload className="h-4 w-4" />
+                      Choose Video File
+                    </Label>
+                    <input
+                      id="video"
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoChange}
+                      className="hidden"
+                      data-testid="input-video-file"
+                    />
+                    {videoFile && <Check className="h-5 w-5 text-green-600" />}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex gap-4">
+                <Button
+                  type="submit"
+                  disabled={uploadMutation.isPending || (!bannerFile && !videoFile)}
+                  data-testid="button-upload-media"
+                >
+                  {uploadMutation.isPending ? "Uploading..." : "Upload Media"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setBannerFile(null);
+                    setVideoFile(null);
+                    setPreviewBanner(null);
+                    setPreviewVideo(null);
+                  }}
+                  data-testid="button-cancel-upload"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </AdminLayout>

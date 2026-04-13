@@ -4,15 +4,18 @@ import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -39,7 +42,7 @@ import {
   ThumbsUp,
   ChevronLeft,
   ChevronRight,
-  Filter,
+  Plus,
   User,
   Package
 } from "lucide-react";
@@ -72,6 +75,16 @@ interface Review {
   updatedAt: string;
 }
 
+interface AddReviewForm {
+  productId: string;
+  customerName: string;
+  rating: string;
+  title: string;
+  comment: string;
+  verifiedPurchase: boolean;
+  photos: string;
+}
+
 export default function ReviewManagement() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,6 +95,16 @@ export default function ReviewManagement() {
   const [page, setPage] = useState(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addForm, setAddForm] = useState<AddReviewForm>({
+    productId: "",
+    customerName: "",
+    rating: "5",
+    title: "",
+    comment: "",
+    verifiedPurchase: false,
+    photos: "",
+  });
   const limit = 20;
 
   const adminToken = localStorage.getItem("adminToken");
@@ -155,6 +178,61 @@ export default function ReviewManagement() {
     },
   });
 
+  const { data: productsData } = useQuery<any>({
+    queryKey: ["/api/products?limit=200&inStock=false"],
+    enabled: addDialogOpen,
+  });
+
+  const products: any[] = (productsData as any)?.products || [];
+
+  const addReviewMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch("/api/admin/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to add review");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Review added successfully!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reviews"], exact: false, refetchType: "all" });
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews/homepage"] });
+      setAddDialogOpen(false);
+      setAddForm({ productId: "", customerName: "", rating: "5", title: "", comment: "", verifiedPurchase: false, photos: "" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleAddReview = () => {
+    if (!addForm.productId || !addForm.customerName || !addForm.title || !addForm.comment) {
+      toast({ title: "Missing fields", description: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+    const photosArray = addForm.photos
+      .split(",")
+      .map((u) => u.trim())
+      .filter(Boolean);
+    addReviewMutation.mutate({
+      productId: addForm.productId,
+      customerName: addForm.customerName,
+      rating: Number(addForm.rating),
+      title: addForm.title,
+      comment: addForm.comment,
+      verifiedPurchase: addForm.verifiedPurchase,
+      photos: photosArray,
+    });
+  };
+
   const handleDeleteClick = (review: Review) => {
     setReviewToDelete(review);
     setDeleteDialogOpen(true);
@@ -209,13 +287,23 @@ export default function ReviewManagement() {
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="text-page-title">
-              Product Reviews Management
-            </h2>
-            <p className="text-muted-foreground">
-              Manage all product reviews from customers across your store
-            </p>
+          <div className="mb-8 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="text-page-title">
+                Product Reviews Management
+              </h2>
+              <p className="text-muted-foreground">
+                Manage all product reviews from customers across your store
+              </p>
+            </div>
+            <Button
+              onClick={() => setAddDialogOpen(true)}
+              className="flex-shrink-0 flex items-center gap-2"
+              data-testid="button-add-review"
+            >
+              <Plus className="h-4 w-4" />
+              Add Review
+            </Button>
           </div>
 
           {/* Stats Cards */}
@@ -540,6 +628,129 @@ export default function ReviewManagement() {
           </Card>
         </div>
       </div>
+
+      {/* Add Review Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Review</DialogTitle>
+            <DialogDescription>
+              Create a review on behalf of a customer. It will appear in the homepage testimonials section.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label htmlFor="add-product">Product *</Label>
+              <Select
+                value={addForm.productId}
+                onValueChange={(v) => setAddForm((f) => ({ ...f, productId: v }))}
+              >
+                <SelectTrigger id="add-product" data-testid="select-add-product">
+                  <SelectValue placeholder="Select a product" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {products.map((p: any) => (
+                    <SelectItem key={p._id} value={p._id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="add-name">Customer Name *</Label>
+              <Input
+                id="add-name"
+                placeholder="e.g. Priya Sharma"
+                value={addForm.customerName}
+                onChange={(e) => setAddForm((f) => ({ ...f, customerName: e.target.value }))}
+                data-testid="input-add-customer-name"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="add-rating">Rating *</Label>
+              <Select
+                value={addForm.rating}
+                onValueChange={(v) => setAddForm((f) => ({ ...f, rating: v }))}
+              >
+                <SelectTrigger id="add-rating" data-testid="select-add-rating">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 Stars ★★★★★</SelectItem>
+                  <SelectItem value="4">4 Stars ★★★★</SelectItem>
+                  <SelectItem value="3">3 Stars ★★★</SelectItem>
+                  <SelectItem value="2">2 Stars ★★</SelectItem>
+                  <SelectItem value="1">1 Star ★</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="add-title">Review Title *</Label>
+              <Input
+                id="add-title"
+                placeholder="e.g. Absolutely stunning!"
+                value={addForm.title}
+                onChange={(e) => setAddForm((f) => ({ ...f, title: e.target.value }))}
+                data-testid="input-add-title"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="add-comment">Review Comment *</Label>
+              <Textarea
+                id="add-comment"
+                placeholder="Write the review..."
+                rows={4}
+                value={addForm.comment}
+                onChange={(e) => setAddForm((f) => ({ ...f, comment: e.target.value }))}
+                data-testid="input-add-comment"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="add-photos">Photo URLs (optional)</Label>
+              <Input
+                id="add-photos"
+                placeholder="Paste image URLs separated by commas"
+                value={addForm.photos}
+                onChange={(e) => setAddForm((f) => ({ ...f, photos: e.target.value }))}
+                data-testid="input-add-photos"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter comma-separated image URLs. Use Cloudinary URLs for best results.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="add-verified"
+                checked={addForm.verifiedPurchase}
+                onCheckedChange={(checked) => setAddForm((f) => ({ ...f, verifiedPurchase: !!checked }))}
+                data-testid="checkbox-add-verified"
+              />
+              <Label htmlFor="add-verified" className="cursor-pointer">
+                Mark as Verified Purchase
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddDialogOpen(false)} data-testid="button-cancel-add">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddReview}
+              disabled={addReviewMutation.isPending}
+              data-testid="button-submit-add-review"
+            >
+              {addReviewMutation.isPending ? "Adding..." : "Add Review"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

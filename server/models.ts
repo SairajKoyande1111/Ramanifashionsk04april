@@ -378,7 +378,7 @@ orderSchema.post('deleteMany', async function() {
 // Review Schema
 const reviewSchema = new Schema({
   productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
-  customerId: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
+  customerId: { type: Schema.Types.ObjectId, ref: 'Customer' },
   customerName: { type: String, required: true },
   rating: { type: Number, required: true, min: 1, max: 5 },
   title: { type: String, required: true },
@@ -386,8 +386,18 @@ const reviewSchema = new Schema({
   verifiedPurchase: { type: Boolean, default: false },
   helpful: { type: Number, default: 0 },
   helpfulVotes: [{ type: Schema.Types.ObjectId, ref: 'Customer' }],
+  photos: { type: [String], default: [] },
+  adminCreated: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+});
+
+// Hero Banner Schema
+const heroBannerSchema = new Schema({
+  type: { type: String, enum: ['desktop', 'mobile'], required: true },
+  filename: { type: String, required: true },
+  order: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now },
 });
 
 // Index for faster queries
@@ -478,4 +488,5 @@ export const Order = mongoose.models.Order || mongoose.model('Order', orderSchem
 export const ContactSubmission = mongoose.models.ContactSubmission || mongoose.model('ContactSubmission', contactSubmissionSchema);
 export const OTP = mongoose.models.OTP || mongoose.model('OTP', otpSchema);
 export const Review = mongoose.models.Review || mongoose.model('Review', reviewSchema);
+export const HeroBanner = mongoose.models.HeroBanner || mongoose.model('HeroBanner', heroBannerSchema);
 export const Settings = mongoose.models.Settings || mongoose.model('Settings', settingsSchema);
