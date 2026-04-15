@@ -1,9 +1,8 @@
-import { SiWhatsapp } from "react-icons/si";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
+import { FaInstagram, FaFacebook } from "react-icons/fa";
+import { SiWhatsapp } from "react-icons/si";
 import logoImage from "@assets/PNG__B_ LOGO_1762442171742.png";
-import instagramIcon from "@assets/instagram_1762445939344.png";
-import facebookIcon from "@assets/communication_1762445935759.png";
 
 export default function Footer() {
   const [location, setLocation] = useLocation();
@@ -33,7 +32,7 @@ export default function Footer() {
 
           {/* Brand */}
           <div className="lg:col-span-2">
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-start mb-4">
               <img
                 src={logoImage}
                 alt="Ramani Fashion"
@@ -41,54 +40,43 @@ export default function Footer() {
                 data-testid="img-footer-logo"
               />
             </div>
-            <p className="text-sm text-muted-foreground mb-6">
+            <p className="text-sm text-muted-foreground mb-6 text-left">
               Your destination for authentic handloom sarees and traditional
               Indian ethnic wear.
             </p>
-            <div className="flex items-start gap-8">
+            <div className="flex items-center gap-3 flex-wrap">
               <a
                 href="https://www.instagram.com/ramanifashionindia/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all shadow-sm hover:shadow-md"
                 data-testid="link-instagram-footer"
+                aria-label="Instagram"
               >
-                <img
-                  src={instagramIcon}
-                  alt="Instagram"
-                  className="h-7 w-7 flex-shrink-0"
-                />
-                <span className="text-xs font-medium text-black text-center leading-tight">
-                  @ramanifashionindia
-                </span>
+                <FaInstagram className="w-4 h-4" />
+                <span className="text-sm font-medium">Instagram</span>
               </a>
               <a
                 href="https://www.facebook.com/186191114586811"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
                 data-testid="link-facebook-footer"
+                aria-label="Facebook"
               >
-                <img
-                  src={facebookIcon}
-                  alt="Facebook"
-                  className="h-7 w-7 flex-shrink-0"
-                />
-                <span className="text-xs font-medium text-black text-center leading-tight">
-                  Ramani Fashion
-                </span>
+                <FaFacebook className="w-4 h-4" />
+                <span className="text-sm font-medium">Facebook</span>
               </a>
               <a
                 href="https://chat.whatsapp.com/GqIsU9ZF2SJ9buuSKxGFWB"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition-all shadow-sm hover:shadow-md"
                 data-testid="link-whatsapp-footer"
+                aria-label="WhatsApp"
               >
-                <SiWhatsapp className="h-7 w-7 text-green-600 flex-shrink-0" />
-                <span className="text-xs font-medium text-black text-center leading-tight">
-                  WhatsApp Group
-                </span>
+                <SiWhatsapp className="w-4 h-4" />
+                <span className="text-sm font-medium">WhatsApp</span>
               </a>
             </div>
           </div>
@@ -204,7 +192,7 @@ export default function Footer() {
 
         <div className="border-t border-pink-200 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-            <p>© 2025 Ramani Fashion India. All rights reserved.</p>
+            <p>© 2026 Ramani Fashion India. All rights reserved.</p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link
                 href="/privacy"

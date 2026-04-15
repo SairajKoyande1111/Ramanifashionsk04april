@@ -19,7 +19,7 @@ import {
   ShoppingBag,
   Truck,
   Shield,
-  RotateCcw,
+  BadgeCheck,
   Sparkles,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -979,12 +979,12 @@ export default function ProductDetail() {
                       </span>
                     </div>
                     <div className="flex flex-col items-center text-center p-4 border rounded-md">
-                      <RotateCcw className="h-8 w-8 text-primary mb-2" />
+                      <BadgeCheck className="h-8 w-8 text-primary mb-2" />
                       <span className="text-sm font-semibold text-foreground">
-                        Easy Returns
+                        Original Product Stamp
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        Original Product Stamp
+                        Authenticity guaranteed
                       </span>
                     </div>
                     <div className="flex flex-col items-center text-center p-4 border rounded-md">

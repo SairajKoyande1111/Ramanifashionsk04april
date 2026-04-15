@@ -72,16 +72,16 @@ export default function HeroCarousel() {
         className="w-full bg-pink-50"
         style={
           isMobile
-            ? { height: "70vw", maxHeight: "600px" }
-            : { height: "55vh", maxHeight: "500px" }
+            ? { height: "90vw", maxHeight: "750px" }
+            : { height: "65vh", maxHeight: "620px" }
         }
       />
     );
   }
 
   const containerStyle = isMobile
-    ? { height: "70vw", maxHeight: "600px", backgroundColor: "#fff" }
-    : { height: "55vh", maxHeight: "500px", backgroundColor: "#fff" };
+    ? { height: "90vw", maxHeight: "750px", backgroundColor: "#fff" }
+    : { height: "65vh", maxHeight: "620px", backgroundColor: "#fff" };
 
   return (
     <div className="relative w-full overflow-hidden" style={containerStyle}>

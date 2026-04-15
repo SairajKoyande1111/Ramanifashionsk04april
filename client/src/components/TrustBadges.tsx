@@ -1,14 +1,14 @@
-import { Truck, RotateCcw, Shield } from "lucide-react";
+import { Truck, BadgeCheck, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const badges = [
   {
     icon: Truck,
-    title: "Free Shipping & Easy Returns",
+    title: "Free Shipping",
     description: "On orders above ₹999",
   },
   {
-    icon: RotateCcw,
+    icon: BadgeCheck,
     title: "100% Authentic Handloom",
     description: "Guaranteed quality products",
   },
