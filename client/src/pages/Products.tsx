@@ -348,7 +348,7 @@ export default function Products() {
                 </p>
               )}
               <p className="text-muted-foreground mt-1" data-testid="text-results-count">
-                {pagination.total} products
+                {pagination.variantTotal ?? pagination.total} variants
               </p>
             </div>
             

@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Search, Pencil, Trash2, Upload, X, Link as LinkIcon, Download, FileUp, CheckCircle, AlertCircle, SkipForward, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ColorVariantEditor, ColorVariant } from "@/components/ColorVariantEditor";
+import { ColorVariantEditor, ColorVariant, ColorVariantEditorHandle } from "@/components/ColorVariantEditor";
 
 const AVAILABLE_COLORS = [
   "Red", "Blue", "Green", "Pink", "Yellow", "Black", "White", "Purple",
@@ -84,6 +84,7 @@ export default function InventoryManagement() {
   const [editVariantAllVariants, setEditVariantAllVariants] = useState<ColorVariant[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editVariantEditorRef = useRef<ColorVariantEditorHandle>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
@@ -1693,6 +1694,7 @@ export default function InventoryManagement() {
           ) : editVariantProductData && editVariantAllVariants.length > 0 ? (
             <div className="space-y-4">
               <ColorVariantEditor
+                ref={editVariantEditorRef}
                 key={`edit-variant-${editVariantProductData._id}-${editVariantIndex}`}
                 variants={editVariantAllVariants}
                 onChange={setEditVariantAllVariants}
@@ -1701,6 +1703,7 @@ export default function InventoryManagement() {
                 isBlouse={editVariantProductData.category === "BLOUSES"}
                 defaultEditIndex={editVariantIndex}
               />
+              <p className="text-xs text-muted-foreground">Your changes are applied automatically when you click Save Changes — no need to click "Update Color Variant" first.</p>
               <div className="flex justify-end gap-3 pt-2 border-t">
                 <Button
                   type="button"
@@ -1720,9 +1723,16 @@ export default function InventoryManagement() {
                   disabled={editColorVariantMutation.isPending}
                   onClick={() => {
                     if (!editVariantProductData) return;
+                    let finalVariants = editVariantAllVariants;
+                    const currentVariant = editVariantEditorRef.current?.getCurrentVariant();
+                    if (currentVariant && editVariantIndex >= 0) {
+                      const updated = [...editVariantAllVariants];
+                      updated[editVariantIndex] = currentVariant;
+                      finalVariants = updated;
+                    }
                     editColorVariantMutation.mutate({
                       productId: editVariantProductData._id,
-                      variants: editVariantAllVariants,
+                      variants: finalVariants,
                     });
                   }}
                   data-testid="button-edit-variant-submit"

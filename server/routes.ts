@@ -381,13 +381,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const flagFilter = req.query.isNew === 'true' ? 'isNew' : req.query.isBestseller === 'true' ? 'isBestseller' : req.query.isTrending === 'true' ? 'isTrending' : null;
         const flattenedProducts = products.flatMap((product: any) => {
           if (product.colorVariants && product.colorVariants.length > 0) {
-            let variants = product.colorVariants;
+            let variants = product.colorVariants.filter((v: any) => v.isActive !== false);
             if (flagFilter) {
               const filtered = variants.filter((v: any) =>
                 v[flagFilter] === true
               );
               if (filtered.length > 0 || product.category !== 'JEWELLERY' || product[flagFilter] !== true) variants = filtered;
             }
+            if (variants.length === 0) return [];
             return variants.map((variant: any) => {
               const variantIndex = product.colorVariants.indexOf(variant);
               return {
@@ -415,6 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             page: pageNum,
             limit: limitNum,
             total,
+            variantTotal: flattenedProducts.length,
             pages: Math.ceil(total / limitNum)
           }
         });
@@ -457,13 +459,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const flagFilter2 = req.query.isNew === 'true' ? 'isNew' : req.query.isBestseller === 'true' ? 'isBestseller' : req.query.isTrending === 'true' ? 'isTrending' : null;
         const flattenedProducts = products.flatMap((product: any) => {
           if (product.colorVariants && product.colorVariants.length > 0) {
-            let variants = product.colorVariants;
+            let variants = product.colorVariants.filter((v: any) => v.isActive !== false);
             if (flagFilter2) {
               const filtered = variants.filter((v: any) =>
                 v[flagFilter2] === true
               );
               if (filtered.length > 0 || product.category !== 'JEWELLERY' || product[flagFilter2] !== true) variants = filtered;
             }
+            if (variants.length === 0) return [];
             return variants.map((variant: any) => {
               const variantIndex = product.colorVariants.indexOf(variant);
               return {
@@ -491,6 +494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             page: pageNum,
             limit: limitNum,
             total,
+            variantTotal: flattenedProducts.length,
             pages: Math.ceil(total / limitNum)
           }
         });
@@ -552,10 +556,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(limitNum)
         .lean();
 
-      // Flatten products with color variants - show ALL color variants in search
+      // Flatten products with color variants - show ALL active color variants in search
       const flattenedProducts = products.flatMap((product: any) => {
         if (product.colorVariants && product.colorVariants.length > 0) {
-          return product.colorVariants.map((variant: any, index: number) => ({
+          return product.colorVariants.filter((v: any) => v.isActive !== false).map((variant: any, index: number) => ({
             _id: `${product._id}_variant_${index}`,
             baseProductId: product._id,
             name: product.name,

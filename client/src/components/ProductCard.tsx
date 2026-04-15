@@ -262,7 +262,7 @@ export default function ProductCard({
         )}
 
         {inStock && (
-          <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1.5">
+          <div className="absolute bottom-0 left-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex-col gap-1.5 hidden md:flex">
             <Button 
               className="w-full bg-primary hover:bg-primary text-primary-foreground"
               onClick={handleAddToCart}

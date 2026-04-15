@@ -26,8 +26,10 @@ const productSchema = new Schema({
           message: 'Each color variant must have between 1 and 5 non-empty image URLs'
         }
       },
+      sku: { type: String },
       stockQuantity: { type: Number, default: 0 },
       inStock: { type: Boolean, default: true },
+      isActive: { type: Boolean, default: true },
       isNew: { type: Boolean, default: false },
       isBestseller: { type: Boolean, default: false },
       isTrending: { type: Boolean, default: false },

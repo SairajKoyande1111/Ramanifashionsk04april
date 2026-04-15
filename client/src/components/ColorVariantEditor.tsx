@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, forwardRef, useImperativeHandle } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,11 @@ export interface BlouseSize {
 export interface ColorVariant {
   color: string;
   colorHex?: string;
+  sku?: string;
   images: string[];
   stockQuantity: number;
   inStock: boolean;
+  isActive?: boolean;
   isNew?: boolean;
   isBestseller?: boolean;
   isTrending?: boolean;
@@ -36,7 +38,11 @@ interface ColorVariantEditorProps {
   defaultEditIndex?: number;
 }
 
-export function ColorVariantEditor({ variants, onChange, availableColors, adminToken, isBlouse = false, defaultEditIndex }: ColorVariantEditorProps) {
+export interface ColorVariantEditorHandle {
+  getCurrentVariant: () => ColorVariant | null;
+}
+
+export const ColorVariantEditor = forwardRef<ColorVariantEditorHandle, ColorVariantEditorProps>(function ColorVariantEditor({ variants, onChange, availableColors, adminToken, isBlouse = false, defaultEditIndex }, ref) {
   const { toast } = useToast();
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null, null]);
 
@@ -61,6 +67,8 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
   const [editingIndex, setEditingIndex] = useState<number | null>(defaultEditIndex !== undefined && defaultEditIndex >= 0 ? defaultEditIndex : null);
   const [showColorSuggestions, setShowColorSuggestions] = useState(false);
 
+  const [variantSku, setVariantSku] = useState<string>(defaultVariant?.sku ?? "");
+  const [variantIsActive, setVariantIsActive] = useState<boolean>(defaultVariant?.isActive !== false);
   const [variantIsNew, setVariantIsNew] = useState<boolean>(defaultVariant?.isNew ?? false);
   const [variantIsBestseller, setVariantIsBestseller] = useState<boolean>(defaultVariant?.isBestseller ?? false);
   const [variantIsTrending, setVariantIsTrending] = useState<boolean>(defaultVariant?.isTrending ?? false);
@@ -68,6 +76,45 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
   const [blouseSizes, setBlouseSizes] = useState<BlouseSize[]>(defaultVariant?.blouseSizes ? [...defaultVariant.blouseSizes] : []);
   const [newSizeInput, setNewSizeInput] = useState("");
   const [newSizeStock, setNewSizeStock] = useState(0);
+
+  useImperativeHandle(ref, () => ({
+    getCurrentVariant: () => {
+      if (editingIndex === null) return null;
+      const colorName = selectedColor.trim();
+      if (!colorName) return null;
+      const validImages = currentImages.filter(img => img.trim() !== "");
+      if (validImages.length === 0) return null;
+      if (isBlouse) {
+        const totalStock = blouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
+        return {
+          color: colorName,
+          colorHex: selectedColorHex,
+          sku: variantSku || undefined,
+          images: validImages,
+          stockQuantity: totalStock,
+          inStock: totalStock > 0,
+          isActive: variantIsActive,
+          isNew: variantIsNew,
+          isBestseller: variantIsBestseller,
+          isTrending: variantIsTrending,
+          blouseSizes: [...blouseSizes],
+        };
+      }
+      const finalInStock = stockQuantity > 0 ? inStock : false;
+      return {
+        color: colorName,
+        colorHex: selectedColorHex,
+        sku: variantSku || undefined,
+        images: validImages,
+        stockQuantity,
+        inStock: finalInStock,
+        isActive: variantIsActive,
+        isNew: variantIsNew,
+        isBestseller: variantIsBestseller,
+        isTrending: variantIsTrending,
+      };
+    }
+  }));
 
   const blouseTotalStock = blouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
   const filteredColors = availableColors.filter((color) =>
@@ -178,9 +225,6 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
 
   const handleAddOrUpdateVariant = () => {
     const colorName = selectedColor.trim();
-    const colorAlreadyExists = variants.some((v, index) =>
-      index !== editingIndex && v.color.trim().toLowerCase() === colorName.toLowerCase()
-    );
 
     if (!colorName) {
       toast({ 
@@ -243,9 +287,11 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       const variant: ColorVariant = {
         color: colorName,
         colorHex: selectedColorHex,
+        sku: variantSku || undefined,
         images: validImages,
         stockQuantity: totalStock,
         inStock: totalStock > 0,
+        isActive: variantIsActive,
         isNew: variantIsNew,
         isBestseller: variantIsBestseller,
         isTrending: variantIsTrending,
@@ -258,10 +304,6 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
         toast({ title: "Color variant updated!" });
         setEditingIndex(null);
       } else {
-        if (colorAlreadyExists) {
-          toast({ title: "Color already exists", description: "This color has already been added", variant: "destructive" });
-          return;
-        }
         onChange([...variants, variant]);
         toast({ title: "Color variant added successfully!" });
       }
@@ -271,6 +313,8 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       setBlouseSizes([]);
       setNewSizeInput("");
       setNewSizeStock(0);
+      setVariantSku("");
+      setVariantIsActive(true);
       setVariantIsNew(false);
       setVariantIsBestseller(false);
       setVariantIsTrending(false);
@@ -302,9 +346,11 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       updatedVariants[editingIndex] = { 
         color: colorName,
         colorHex: selectedColorHex,
+        sku: variantSku || undefined,
         images: validImages,
         stockQuantity: stockQuantity,
         inStock: finalInStock,
+        isActive: variantIsActive,
         isNew: variantIsNew,
         isBestseller: variantIsBestseller,
         isTrending: variantIsTrending,
@@ -313,20 +359,14 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       toast({ title: "Color variant updated!" });
       setEditingIndex(null);
     } else {
-      if (colorAlreadyExists) {
-        toast({ 
-          title: "Color already exists", 
-          description: "This color has already been added",
-          variant: "destructive" 
-        });
-        return;
-      }
       onChange([...variants, { 
         color: colorName,
         colorHex: selectedColorHex,
+        sku: variantSku || undefined,
         images: validImages,
         stockQuantity: stockQuantity,
         inStock: finalInStock,
+        isActive: variantIsActive,
         isNew: variantIsNew,
         isBestseller: variantIsBestseller,
         isTrending: variantIsTrending,
@@ -339,6 +379,8 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
     setCurrentImages(["", "", "", "", ""]);
     setStockQuantity(0);
     setInStock(true);
+    setVariantSku("");
+    setVariantIsActive(true);
     setVariantIsNew(false);
     setVariantIsBestseller(false);
     setVariantIsTrending(false);
@@ -360,6 +402,8 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       setStockQuantity(variant.stockQuantity || 0);
       setInStock(variant.inStock !== undefined ? variant.inStock : true);
     }
+    setVariantSku(variant.sku ?? "");
+    setVariantIsActive(variant.isActive !== false);
     setVariantIsNew(variant.isNew ?? false);
     setVariantIsBestseller(variant.isBestseller ?? false);
     setVariantIsTrending(variant.isTrending ?? false);
@@ -378,6 +422,8 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
     setCurrentImages(["", "", "", "", ""]);
     setStockQuantity(0);
     setInStock(true);
+    setVariantSku("");
+    setVariantIsActive(true);
     setVariantIsNew(false);
     setVariantIsBestseller(false);
     setVariantIsTrending(false);
@@ -613,10 +659,32 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
             </div>
           )}
 
+          <div className="space-y-2">
+            <Label htmlFor="variant-sku" data-testid="label-variant-sku">SKU (Optional)</Label>
+            <Input
+              id="variant-sku"
+              placeholder="e.g. RF-RED-001"
+              value={variantSku}
+              onChange={(e) => setVariantSku(e.target.value)}
+              data-testid="input-variant-sku"
+            />
+          </div>
+
           <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
             <Label className="text-sm font-medium">Status Tags for this Color Variant</Label>
             <p className="text-xs text-muted-foreground">These tags apply only to this specific color variant.</p>
             <div className="flex gap-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <input
+                  id="variant-isActive"
+                  type="checkbox"
+                  checked={variantIsActive}
+                  onChange={(e) => setVariantIsActive(e.target.checked)}
+                  className="h-4 w-4"
+                  data-testid="checkbox-variant-is-active"
+                />
+                <Label htmlFor="variant-isActive" className="cursor-pointer text-sm" data-testid="label-variant-is-active">Active (visible on site)</Label>
+              </div>
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="variant-isNew"
@@ -785,6 +853,8 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
                           {variant.isNew && <Badge variant="outline" className="text-green-600 border-green-400 text-xs">New</Badge>}
                           {variant.isBestseller && <Badge variant="outline" className="text-amber-600 border-amber-400 text-xs">Bestseller</Badge>}
                           {variant.isTrending && <Badge variant="outline" className="text-blue-600 border-blue-400 text-xs">Trending</Badge>}
+                          {variant.sku && <Badge variant="outline" className="text-purple-600 border-purple-400 text-xs font-mono">SKU: {variant.sku}</Badge>}
+                          {variant.isActive === false && <Badge variant="destructive" className="text-xs">Inactive</Badge>}
                           {isBlouse ? (
                             <>
                               <Badge variant="secondary" data-testid={`badge-stock-status-${index}`}>
@@ -853,4 +923,4 @@ export function ColorVariantEditor({ variants, onChange, availableColors, adminT
       )}
     </div>
   );
-}
+});
