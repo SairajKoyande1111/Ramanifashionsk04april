@@ -12,7 +12,8 @@ import {
   Users,
   Star,
   Image,
-  Layers
+  Layers,
+  Megaphone
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -50,6 +51,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { path: "/admin/analytics", label: "Analytics", icon: BarChart3 },
     { path: "/admin/categories", label: "Categories", icon: Layers },
     { path: "/admin/media", label: "Update Images", icon: Image },
+    { path: "/admin/announcement", label: "Announcement Bar", icon: Megaphone },
     { path: "/admin/settings", label: "Settings", icon: Settings },
   ];
 

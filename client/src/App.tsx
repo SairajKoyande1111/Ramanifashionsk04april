@@ -35,6 +35,7 @@ import Analytics from "@/pages/admin/Analytics";
 import MediaManagement from "@/pages/admin/MediaManagement";
 import Settings from "@/pages/admin/Settings";
 import CategoryManagement from "@/pages/admin/CategoryManagement";
+import AnnouncementManagement from "@/pages/admin/AnnouncementManagement";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 import Shipping from "@/pages/Shipping";
@@ -80,6 +81,7 @@ function Router() {
       <Route path="/admin/analytics" component={Analytics} />
       <Route path="/admin/categories" component={CategoryManagement} />
       <Route path="/admin/media" component={MediaManagement} />
+      <Route path="/admin/announcement" component={AnnouncementManagement} />
       <Route path="/admin/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>

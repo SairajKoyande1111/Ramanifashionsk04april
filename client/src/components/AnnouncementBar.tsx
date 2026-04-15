@@ -25,7 +25,7 @@ export default function AnnouncementBar() {
   return (
     <div
       className="w-full overflow-hidden select-none"
-      style={{ backgroundColor: "var(--announcement-bg, #d4679a)" }}
+      style={{ backgroundColor: "hsl(338, 78%, 62%)" }}
       data-testid="announcement-bar"
     >
       <style>{`
