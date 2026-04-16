@@ -337,13 +337,13 @@ export default function Products() {
             )}
           </nav>
           
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div className="flex-1 min-w-0">
               <h1 className="text-2xl font-bold mb-1" data-testid="text-page-title">
                 {pageTitle}
               </h1>
               {activeSubcategory?.description && (
-                <p className="text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed" data-testid="text-subcategory-description">
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed" data-testid="text-subcategory-description">
                   {activeSubcategory.description}
                 </p>
               )}
@@ -352,7 +352,7 @@ export default function Products() {
               </p>
             </div>
             
-            <div className="hidden lg:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
               <Select 
                 value={sortBy && order ? `${sortBy}-${order}` : "none"} 
                 onValueChange={handleSortChange}

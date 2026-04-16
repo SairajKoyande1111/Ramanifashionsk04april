@@ -110,7 +110,7 @@ export default function HeroCarousel() {
       : [];
 
   const desktopStyle = { height: "65vh", maxHeight: "620px", backgroundColor: "#fff" };
-  const mobileStyle = { height: "90vw", maxHeight: "750px", backgroundColor: "#fff" };
+  const mobileStyle = { height: "125vw", maxHeight: "860px", backgroundColor: "#fff" };
 
   const showDesktop = desktopSrcs.length > 0;
   const showMobile = mobileSrcs.length > 0;
@@ -119,7 +119,7 @@ export default function HeroCarousel() {
     return (
       <>
         <div className="hidden md:block w-full bg-pink-50" style={desktopStyle} />
-        <div className="block md:hidden w-full bg-pink-50" style={mobileStyle} />
+        <div className="block md:hidden w-full bg-pink-50" style={{ height: "125vw", maxHeight: "860px", backgroundColor: "#fdf2f8" }} />
       </>
     );
   }

@@ -345,7 +345,7 @@ export default function MediaManagement() {
               label="Mobile Hero Carousel"
               description="Portrait images shown on mobile phones. Each uploaded image becomes a carousel slide."
               icon={Smartphone}
-              aspectHint="Recommended: 9:16 portrait format (e.g. 1080×1920). Upload one image at a time to add slides."
+              aspectHint="Recommended size: 1080 × 1350 px (4:5 portrait ratio). This matches the banner height on mobile screens. Minimum width: 1080 px."
             />
 
             <form onSubmit={handleSubmit} className="space-y-6">
