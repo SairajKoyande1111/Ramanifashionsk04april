@@ -46,9 +46,11 @@ interface CategoryItem {
   subCategories?: { name: string; slug: string }[];
 }
 
+const NO_LINK = "__none__";
+
 function buildCategoryOptions(categories: CategoryItem[]) {
   const options: { label: string; value: string }[] = [
-    { label: "No link (not clickable)", value: "" },
+    { label: "No link (not clickable)", value: NO_LINK },
   ];
   for (const cat of categories) {
     options.push({ label: cat.name, value: `/products?category=${encodeURIComponent(cat.name)}` });
@@ -75,17 +77,18 @@ function CategoryLinkDialog({
   adminToken: string;
 }) {
   const { toast } = useToast();
-  const [selected, setSelected] = useState(currentLink || "");
+  const [selected, setSelected] = useState(currentLink || NO_LINK);
 
   const updateMutation = useMutation({
     mutationFn: async () => {
+      const linkValue = selected === NO_LINK ? "" : selected;
       const res = await fetch(`/api/admin/hero-banners/${bannerId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${adminToken}`,
         },
-        body: JSON.stringify({ categoryLink: selected }),
+        body: JSON.stringify({ categoryLink: linkValue }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -126,7 +129,7 @@ function CategoryLinkDialog({
               ))}
             </SelectContent>
           </Select>
-          {selected && (
+          {selected && selected !== NO_LINK && (
             <p className="text-xs text-muted-foreground">Redirects to: <span className="font-mono">{selected}</span></p>
           )}
         </div>
@@ -230,7 +233,8 @@ function CarouselUploadSection({
     const formData = new FormData();
     formData.append("image", selectedFile);
     formData.append("type", type);
-    if (uploadCategoryLink) formData.append("categoryLink", uploadCategoryLink);
+    const linkValue = uploadCategoryLink && uploadCategoryLink !== NO_LINK ? uploadCategoryLink : "";
+    if (linkValue) formData.append("categoryLink", linkValue);
     uploadMutation.mutate(formData);
   };
 
@@ -322,7 +326,7 @@ function CarouselUploadSection({
                   </SelectTrigger>
                   <SelectContent>
                     {categoryOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value === "" ? "__none__" : opt.value}>
+                      <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>
                     ))}
