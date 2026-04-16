@@ -14,11 +14,12 @@ declare module 'http' {
   }
 }
 app.use(express.json({
+  limit: "100mb",
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "100mb" }));
 
 // Add Content Security Policy headers for PhonePe payment integration
 app.use((req, res, next) => {
