@@ -2871,11 +2871,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? Math.round(((currentAvgOrderValue - lastAvgOrderValue) / lastAvgOrderValue) * 100) 
         : 0;
 
+      const revenueGrowth = lastMonthRevenue > 0
+        ? Math.round(((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100)
+        : currentMonthRevenue > 0 ? 100 : 0;
+
+      // Today's orders
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayOrders = orders.filter(o => new Date(o.createdAt) >= todayStart).length;
+
+      // Pending orders (need attention)
+      const pendingOrders = orders.filter(o => o.orderStatus === 'pending').length;
+      const processingOrders = orders.filter(o => o.orderStatus === 'processing' || o.orderStatus === 'approved').length;
+      const shippedOrders = orders.filter(o => o.orderStatus === 'shipped').length;
+      const deliveredOrders = orders.filter(o => o.orderStatus === 'delivered').length;
+      const cancelledOrders = orders.filter(o => o.orderStatus === 'cancelled').length;
+
+      const orderStatusBreakdown = [
+        { name: 'Pending', value: pendingOrders, color: '#f59e0b' },
+        { name: 'Processing', value: processingOrders, color: '#3b82f6' },
+        { name: 'Shipped', value: shippedOrders, color: '#8b5cf6' },
+        { name: 'Delivered', value: deliveredOrders, color: '#10b981' },
+        { name: 'Cancelled', value: cancelledOrders, color: '#ef4444' },
+      ].filter(s => s.value > 0);
+
       res.json({
         totalProducts,
         totalUsers,
         totalOrders,
         totalRevenue,
+        totalCustomers: allCustomers.length,
         lowStockProducts,
         outOfStockProducts,
         recentOrders,
@@ -2885,10 +2910,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recentActivity,
         customerGrowthData,
         orderTrendsData,
+        currentMonthRevenue: Math.round(currentMonthRevenue),
+        lastMonthRevenue: Math.round(lastMonthRevenue),
+        currentMonthOrders,
+        lastMonthOrders,
+        currentMonthCustomers,
+        todayOrders,
+        pendingOrders,
+        orderStatusBreakdown,
         growthStats: {
           orderGrowth,
           customerGrowthPercentage,
-          avgOrderValueGrowth
+          avgOrderValueGrowth,
+          revenueGrowth
         }
       });
     } catch (error: any) {
