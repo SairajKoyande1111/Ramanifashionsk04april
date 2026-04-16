@@ -133,7 +133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) return res.status(500).json({ error: "Upload failed" });
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       try {
-        const url = await uploadToCloudinary(req.file.buffer, req.file.originalname);
+        const existingCategory = await Category.findById(req.params.id);
+        const oldUrl = existingCategory?.image || "";
+        const url = await uploadToCloudinary(req.file.buffer, req.file.originalname, oldUrl);
         const category = await Category.findByIdAndUpdate(
           req.params.id,
           { image: url, updatedAt: new Date() },
@@ -162,6 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (req.file) {
           imageUrl = await uploadToCloudinary(req.file.buffer, req.file.originalname);
         }
+
         const category = await Category.findById(req.params.id);
         if (!category) return res.status(404).json({ error: "Category not found" });
         const subs: any[] = Array.isArray(category.subCategories) ? [...category.subCategories] : [];
@@ -202,7 +205,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subs[idx].description = description;
         }
         if (req.file) {
-          subs[idx].image = await uploadToCloudinary(req.file.buffer, req.file.originalname);
+          const oldSubUrl = subs[idx].image || "";
+          subs[idx].image = await uploadToCloudinary(req.file.buffer, req.file.originalname, oldSubUrl);
         }
         category.subCategories = subs;
         category.markModified('subCategories');
@@ -2245,8 +2249,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `${files.length} file(s) uploaded successfully`
         });
       } catch (uploadError: any) {
-        console.error('[Cloudinary] Upload error:', uploadError);
-        res.status(500).json({ error: 'Failed to upload images to Cloudinary', details: uploadError.message });
+        console.error('[LocalStorage] Upload error:', uploadError);
+        res.status(500).json({ error: 'Failed to upload images', details: uploadError.message });
       }
     });
   });
@@ -4026,7 +4030,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       try {
         if (!req.file) return res.status(400).json({ error: 'No image provided' });
-        const url = await uploadToCloudinary(req.file.buffer, req.file.originalname);
+        const oldUrl = req.body.oldUrl || "";
+        const url = await uploadToCloudinary(req.file.buffer, req.file.originalname, oldUrl);
         res.json({ url });
       } catch (error: any) {
         res.status(500).json({ error: error.message });

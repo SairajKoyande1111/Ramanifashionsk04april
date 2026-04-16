@@ -45,6 +45,9 @@ app.use("/attached_assets", express.static(path.resolve("./attached_assets")));
 // Serve static files from uploads directory
 app.use("/uploads", express.static(path.resolve("./uploads")));
 
+// Serve static files from images directory (local image storage, replaces Cloudinary)
+app.use("/images", express.static(path.resolve("./public/images")));
+
 // Serve static files from media directory with proper video streaming headers
 const mimeTypes: Record<string, string> = {
   ".mp4": "video/mp4",

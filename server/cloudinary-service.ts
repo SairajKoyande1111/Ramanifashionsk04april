@@ -1,55 +1,57 @@
-import { v2 as cloudinary } from "cloudinary";
+import path from "path";
+import fs from "fs";
+import { randomBytes } from "crypto";
 
-function configureCloudinary() {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+const IMAGES_DIR = path.join(process.cwd(), "public", "images");
 
-  if (!cloudName || !apiKey || !apiSecret) {
-    const missing = [
-      !cloudName && "CLOUDINARY_CLOUD_NAME",
-      !apiKey && "CLOUDINARY_API_KEY",
-      !apiSecret && "CLOUDINARY_API_SECRET",
-    ].filter(Boolean);
-    throw new Error(`Missing Cloudinary environment variables: ${missing.join(", ")}. Add them to your .env file.`);
+if (!fs.existsSync(IMAGES_DIR)) {
+  fs.mkdirSync(IMAGES_DIR, { recursive: true });
+}
+
+function getLocalPath(filename: string): string {
+  return path.join(IMAGES_DIR, filename);
+}
+
+function urlToFilePath(url: string): string | null {
+  if (!url) return null;
+  const prefix = "/images/";
+  const idx = url.indexOf(prefix);
+  if (idx === -1) return null;
+  const filename = url.slice(idx + prefix.length);
+  return path.join(IMAGES_DIR, filename);
+}
+
+export function deleteLocalImage(url: string): void {
+  const filePath = urlToFilePath(url);
+  if (filePath && fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+      console.log(`[LocalStorage] Deleted old image: ${filePath}`);
+    } catch (err) {
+      console.error(`[LocalStorage] Failed to delete old image: ${filePath}`, err);
+    }
   }
-
-  cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
 }
 
 export async function uploadToCloudinary(
   buffer: Buffer,
   originalName: string,
+  oldUrl?: string,
 ): Promise<string> {
-  configureCloudinary();
+  if (oldUrl) {
+    deleteLocalImage(oldUrl);
+  }
+
+  const ext = path.extname(originalName).toLowerCase() || ".jpg";
+  const filename = randomBytes(16).toString("hex") + ext;
+  const destPath = getLocalPath(filename);
+
+  fs.writeFileSync(destPath, buffer);
 
   const sizeMB = (buffer.length / 1024 / 1024).toFixed(2);
-  const sizeKB = (buffer.length / 1024).toFixed(1);
-  console.log(`[Cloudinary] Uploading: ${originalName} — size received by server: ${sizeMB} MB (${sizeKB} KB) — NO compression applied`);
+  console.log(`[LocalStorage] Saved: ${filename} — ${sizeMB} MB — full quality, no compression`);
 
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: "ramani-fashion/products",
-        resource_type: "image",
-        use_filename: false,
-        unique_filename: true,
-        overwrite: false,
-      },
-      (error, result) => {
-        if (error) {
-          console.error("[Cloudinary] Upload error:", error);
-          return reject(error);
-        }
-        if (!result) {
-          return reject(new Error("No result from Cloudinary upload"));
-        }
-        console.log(`[Cloudinary] SUCCESS — stored at: ${result.secure_url} | format: ${result.format} | dimensions: ${result.width}x${result.height} | bytes: ${result.bytes}`);
-        resolve(result.secure_url);
-      },
-    );
-    uploadStream.end(buffer);
-  });
+  return `/images/${filename}`;
 }
 
-export default cloudinary;
+export default {};
