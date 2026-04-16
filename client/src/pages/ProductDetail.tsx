@@ -21,6 +21,7 @@ import {
   Shield,
   BadgeCheck,
   Sparkles,
+  Share2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { localStorageService } from "@/lib/localStorage";
@@ -41,47 +42,20 @@ export default function ProductDetail() {
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const hasMoved = useRef(false);
 
-  const [touchZoomScale, setTouchZoomScale] = useState(1);
-  const [touchZoomOrigin, setTouchZoomOrigin] = useState({ x: 50, y: 50 });
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
-  const pinchStartDist = useRef(0);
-  const pinchStartScale = useRef(1);
   const isSwiping = useRef(false);
-
-  const getTouchDist = (touches: React.TouchList) => {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length === 1) {
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
       isSwiping.current = false;
-    } else if (e.touches.length === 2) {
-      e.preventDefault();
-      pinchStartDist.current = getTouchDist(e.touches);
-      pinchStartScale.current = touchZoomScale;
-      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      const rect = e.currentTarget.getBoundingClientRect();
-      setTouchZoomOrigin({
-        x: ((midX - rect.left) / rect.width) * 100,
-        y: ((midY - rect.top) / rect.height) * 100,
-      });
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      const dist = getTouchDist(e.touches);
-      const ratio = dist / pinchStartDist.current;
-      const newScale = Math.min(4, Math.max(1, pinchStartScale.current * ratio));
-      setTouchZoomScale(newScale);
-    } else if (e.touches.length === 1 && touchZoomScale <= 1) {
+    if (e.touches.length === 1) {
       const dx = Math.abs(e.touches[0].clientX - touchStartX.current);
       const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
       if (dx > dy && dx > 10) isSwiping.current = true;
@@ -89,7 +63,7 @@ export default function ProductDetail() {
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (isSwiping.current && touchZoomScale <= 1) {
+    if (isSwiping.current) {
       const dx = e.changedTouches[0].clientX - touchStartX.current;
       if (Math.abs(dx) > 50) {
         setSelectedImage(prev => {
@@ -97,9 +71,6 @@ export default function ProductDetail() {
           return Math.max(prev - 1, 0);
         });
       }
-    }
-    if (e.touches.length === 0 && touchZoomScale < 1.05) {
-      setTouchZoomScale(1);
     }
     isSwiping.current = false;
   };
@@ -138,7 +109,6 @@ export default function ProductDetail() {
     window.scrollTo({ top: 0, behavior: "smooth" });
     setSelectedImage(0);
     setIsZooming(false);
-    setTouchZoomScale(1);
     hasMoved.current = false;
   }, [id]);
 
@@ -342,6 +312,30 @@ export default function ProductDetail() {
     });
   };
 
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    const shareData = {
+      title: product?.name || "Ramani Fashion",
+      text: product?.description || "Check out this beautiful saree from Ramani Fashion!",
+      url: shareUrl,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({ title: "Link copied to clipboard!" });
+      }
+    } catch {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({ title: "Link copied to clipboard!" });
+      } catch {
+        toast({ title: "Could not share", variant: "destructive" });
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -468,19 +462,15 @@ export default function ProductDetail() {
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                style={{ cursor: isZooming ? 'zoom-in' : 'default', touchAction: touchZoomScale > 1 ? 'none' : 'pan-y' }}
+                style={{ cursor: isZooming ? 'zoom-in' : 'default', touchAction: 'pan-y' }}
               >
                 <img
                   src={images[selectedImage] || "/default-saree.jpg"}
                   alt={product.name}
                   className="w-full h-auto aspect-[2/3] object-cover transition-transform duration-100 ease-out"
                   style={{
-                    transform: touchZoomScale > 1
-                      ? `scale(${touchZoomScale})`
-                      : isZooming ? 'scale(2.2)' : 'scale(1)',
-                    transformOrigin: touchZoomScale > 1
-                      ? `${touchZoomOrigin.x}% ${touchZoomOrigin.y}%`
-                      : `${zoomPos.x}% ${zoomPos.y}%`,
+                    transform: isZooming ? 'scale(2.2)' : 'scale(1)',
+                    transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
                   }}
                   data-testid="img-product-main"
                   onError={(e) => { e.currentTarget.src = '/default-saree.jpg'; }}
@@ -493,12 +483,12 @@ export default function ProductDetail() {
                     </span>
                   </div>
                 )}
-                {!isZooming && touchZoomScale <= 1 && (
+                {!isZooming && (
                   <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full pointer-events-none select-none hidden md:block">
                     🔍 Hover to zoom
                   </div>
                 )}
-                {images.length > 1 && touchZoomScale <= 1 && (
+                {images.length > 1 && (
                   <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full pointer-events-none select-none md:hidden">
                     ← Swipe →
                   </div>
@@ -786,6 +776,16 @@ export default function ProductDetail() {
                 data-testid="button-add-to-wishlist"
               >
                 <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-white text-white' : ''}`} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full"
+                onClick={handleShare}
+                data-testid="button-share"
+                title="Share this product"
+              >
+                <Share2 className="h-4 w-4" />
               </Button>
             </div>
 
