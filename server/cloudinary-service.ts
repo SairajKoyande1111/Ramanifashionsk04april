@@ -78,76 +78,81 @@ export function extractCategoryImageUrls(category: any): string[] {
 async function compressImage(buffer: Buffer, originalName: string): Promise<{ buffer: Buffer; ext: string }> {
   const TARGET_MIN = 600 * 1024;  // 600 KB
   const TARGET_MAX = 1024 * 1024; // 1 MB
-
   const originalSizeKB = (buffer.length / 1024).toFixed(1);
 
-  // If already within target range, skip compression
+  // Always output as JPEG for consistent compression
+  const ext = ".jpg";
+
+  // Already within 600KB–1MB: keep as-is
   if (buffer.length >= TARGET_MIN && buffer.length <= TARGET_MAX) {
-    const ext = path.extname(originalName).toLowerCase() || ".jpg";
-    console.log(`[Compress] ${originalName} — already in range at ${originalSizeKB} KB, skipping compression`);
+    console.log(`[Compress] ${originalName} — ${originalSizeKB} KB already in target range, keeping as-is`);
     return { buffer, ext };
   }
 
-  // If smaller than 600 KB, keep as-is (no upscaling)
+  // Under 600KB: keep as-is (never upscale/inflate)
   if (buffer.length < TARGET_MIN) {
-    const ext = path.extname(originalName).toLowerCase() || ".jpg";
     console.log(`[Compress] ${originalName} — ${originalSizeKB} KB (under 600 KB, keeping as-is)`);
     return { buffer, ext };
   }
 
-  // Image is over 1 MB — compress it
-  // We always output as JPEG for maximum compatibility and compression
-  const ext = ".jpg";
-
-  // Try quality levels from 85 down to 60 until we hit target
-  const qualityLevels = [85, 80, 75, 70, 65, 60];
-
-  for (const quality of qualityLevels) {
+  // Over 1MB: compress to target range using quality reduction only (no resize, preserves pixel count)
+  // We use standard JPEG (no mozjpeg) to avoid overshooting compression
+  const qualityOnlyLevels = [85, 82, 78, 75];
+  for (const quality of qualityOnlyLevels) {
     const compressed = await sharp(buffer)
-      .rotate() // auto-correct EXIF orientation
-      .jpeg({ quality, mozjpeg: true })
+      .rotate()
+      .jpeg({ quality })
       .toBuffer();
-
-    const compressedSizeKB = (compressed.length / 1024).toFixed(1);
-    console.log(`[Compress] ${originalName} — ${originalSizeKB} KB → quality ${quality} → ${compressedSizeKB} KB`);
-
-    if (compressed.length <= TARGET_MAX) {
-      console.log(`[Compress] ✓ Final size ${compressedSizeKB} KB at quality ${quality}`);
+    const kb = (compressed.length / 1024).toFixed(0);
+    console.log(`[Compress] ${originalName} — quality ${quality} (full-res) → ${kb} KB`);
+    if (compressed.length >= TARGET_MIN && compressed.length <= TARGET_MAX) {
+      console.log(`[Compress] ✓ ${originalName} — saved at ${kb} KB (quality ${quality}, full resolution)`);
+      return { buffer: compressed, ext };
+    }
+    // If we already dropped below target min, don't go lower quality — use previous result
+    if (compressed.length < TARGET_MIN) {
+      // Previous quality was too aggressive; use this one since it's the first under 1MB
+      console.log(`[Compress] ✓ ${originalName} — saved at ${kb} KB (quality ${quality}, full resolution, slightly under 600 KB)`);
       return { buffer: compressed, ext };
     }
   }
 
-  // If still over 1 MB after quality reduction, try resizing down while maintaining aspect ratio
+  // Still over 1MB after quality reduction: try resizing (larger dimensions first to preserve quality)
+  // Strategy: maintain quality 85, reduce width progressively until we hit 600KB–1MB
   const metadata = await sharp(buffer).metadata();
-  const widthSteps = [1600, 1400, 1200, 1000, 800];
+  const originalWidth = metadata.width || 4000;
 
-  for (const maxWidth of widthSteps) {
-    if (metadata.width && metadata.width <= maxWidth) continue;
+  const resizeSteps = [
+    { maxWidth: 3000, quality: 85 },
+    { maxWidth: 2560, quality: 85 },
+    { maxWidth: 2048, quality: 85 },
+    { maxWidth: 1920, quality: 85 },
+    { maxWidth: 1600, quality: 85 },
+  ];
 
+  for (const { maxWidth, quality } of resizeSteps) {
+    if (originalWidth <= maxWidth) continue; // No point resizing to larger
     const resized = await sharp(buffer)
       .rotate()
       .resize({ width: maxWidth, withoutEnlargement: true })
-      .jpeg({ quality: 75, mozjpeg: true })
+      .jpeg({ quality })
       .toBuffer();
-
-    const resizedSizeKB = (resized.length / 1024).toFixed(1);
-    console.log(`[Compress] ${originalName} — resized to ${maxWidth}px → ${resizedSizeKB} KB`);
-
+    const kb = (resized.length / 1024).toFixed(0);
+    console.log(`[Compress] ${originalName} — resize to ${maxWidth}px q${quality} → ${kb} KB`);
     if (resized.length <= TARGET_MAX) {
-      console.log(`[Compress] ✓ Final size ${resizedSizeKB} KB after resize to ${maxWidth}px`);
+      console.log(`[Compress] ✓ ${originalName} — saved at ${kb} KB (${maxWidth}px, quality ${quality})`);
       return { buffer: resized, ext };
     }
   }
 
-  // Last resort: resize to 800px with quality 60
+  // Final fallback: 1600px quality 80 — covers extreme cases
   const fallback = await sharp(buffer)
     .rotate()
-    .resize({ width: 800, withoutEnlargement: true })
-    .jpeg({ quality: 60, mozjpeg: true })
+    .resize({ width: 1600, withoutEnlargement: true })
+    .jpeg({ quality: 80 })
     .toBuffer();
-
-  const fallbackSizeKB = (fallback.length / 1024).toFixed(1);
-  console.log(`[Compress] ${originalName} — fallback result: ${fallbackSizeKB} KB`);
+  const kb = (fallback.length / 1024).toFixed(0);
+  console.log(`[Compress] ✓ ${originalName} — fallback saved at ${kb} KB (1600px, quality 80)`);
   return { buffer: fallback, ext };
 }
 
@@ -167,8 +172,8 @@ export async function uploadToCloudinary(
 
   fs.writeFileSync(destPath, compressedBuffer);
 
-  const sizeMB = (compressedBuffer.length / 1024 / 1024).toFixed(2);
   const sizeKB = (compressedBuffer.length / 1024).toFixed(0);
+  const sizeMB = (compressedBuffer.length / 1024 / 1024).toFixed(2);
   console.log(`[LocalStorage] Saved: ${filename} — ${sizeKB} KB (${sizeMB} MB)`);
 
   return `/images/${filename}`;

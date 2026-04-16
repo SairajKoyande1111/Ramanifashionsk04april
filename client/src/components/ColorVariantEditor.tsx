@@ -7,6 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Link as LinkIcon, Trash2, Edit2, Plus, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { colorNameToCss, getColorCssValue } from "@/lib/colorUtils";
 
@@ -40,6 +50,7 @@ interface ColorVariantEditorProps {
 
 export interface ColorVariantEditorHandle {
   getCurrentVariant: () => ColorVariant | null;
+  getUpdatedVariants: (allVariants: ColorVariant[]) => ColorVariant[];
 }
 
 export const ColorVariantEditor = forwardRef<ColorVariantEditorHandle, ColorVariantEditorProps>(function ColorVariantEditor({ variants, onChange, availableColors, adminToken, isBlouse = false, defaultEditIndex }, ref) {
@@ -77,42 +88,58 @@ export const ColorVariantEditor = forwardRef<ColorVariantEditorHandle, ColorVari
   const [newSizeInput, setNewSizeInput] = useState("");
   const [newSizeStock, setNewSizeStock] = useState(0);
 
-  useImperativeHandle(ref, () => ({
-    getCurrentVariant: () => {
-      const colorName = selectedColor.trim();
-      if (!colorName) return null;
-      const validImages = currentImages.filter(img => img.trim() !== "");
-      if (validImages.length === 0) return null;
-      if (isBlouse) {
-        const totalStock = blouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
-        return {
-          color: colorName,
-          colorHex: selectedColorHex,
-          sku: variantSku || undefined,
-          images: validImages,
-          stockQuantity: totalStock,
-          inStock: totalStock > 0,
-          isActive: variantIsActive,
-          isNew: variantIsNew,
-          isBestseller: variantIsBestseller,
-          isTrending: variantIsTrending,
-          blouseSizes: [...blouseSizes],
-        };
-      }
-      const finalInStock = stockQuantity > 0 ? inStock : false;
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+
+  const buildCurrentVariant = (): ColorVariant | null => {
+    const colorName = selectedColor.trim();
+    if (!colorName) return null;
+    const validImages = currentImages.filter(img => img.trim() !== "");
+    if (validImages.length === 0) return null;
+    if (isBlouse) {
+      const totalStock = blouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
       return {
         color: colorName,
         colorHex: selectedColorHex,
         sku: variantSku || undefined,
         images: validImages,
-        stockQuantity,
-        inStock: finalInStock,
+        stockQuantity: totalStock,
+        inStock: totalStock > 0,
         isActive: variantIsActive,
         isNew: variantIsNew,
         isBestseller: variantIsBestseller,
         isTrending: variantIsTrending,
+        blouseSizes: [...blouseSizes],
       };
     }
+    const finalInStock = stockQuantity > 0 ? inStock : false;
+    return {
+      color: colorName,
+      colorHex: selectedColorHex,
+      sku: variantSku || undefined,
+      images: validImages,
+      stockQuantity,
+      inStock: finalInStock,
+      isActive: variantIsActive,
+      isNew: variantIsNew,
+      isBestseller: variantIsBestseller,
+      isTrending: variantIsTrending,
+    };
+  };
+
+  useImperativeHandle(ref, () => ({
+    getCurrentVariant: () => buildCurrentVariant(),
+    getUpdatedVariants: (allVariants: ColorVariant[]) => {
+      const currentVariant = buildCurrentVariant();
+      if (!currentVariant) return allVariants;
+      // Use the editor's internal editingIndex first, then fall back to defaultEditIndex
+      const targetIndex = editingIndex !== null
+        ? editingIndex
+        : (defaultEditIndex !== undefined && defaultEditIndex >= 0 ? defaultEditIndex : null);
+      if (targetIndex === null || targetIndex >= allVariants.length) return allVariants;
+      const updated = [...allVariants];
+      updated[targetIndex] = currentVariant;
+      return updated;
+    },
   }));
 
   const blouseTotalStock = blouseSizes.reduce((s, x) => s + (x.stockQuantity || 0), 0);
@@ -411,7 +438,28 @@ export const ColorVariantEditor = forwardRef<ColorVariantEditorHandle, ColorVari
   };
 
   const handleRemoveVariant = (index: number) => {
-    onChange(variants.filter((_, i) => i !== index));
+    setPendingDeleteIndex(index);
+  };
+
+  const confirmRemoveVariant = () => {
+    if (pendingDeleteIndex === null) return;
+    onChange(variants.filter((_, i) => i !== pendingDeleteIndex));
+    // Reset form if we were editing the deleted variant
+    if (editingIndex === pendingDeleteIndex) {
+      setSelectedColor("");
+      setSelectedColorHex("#ff0000");
+      setCurrentImages(["", "", "", "", ""]);
+      setStockQuantity(0);
+      setInStock(true);
+      setVariantSku("");
+      setVariantIsActive(true);
+      setVariantIsNew(false);
+      setVariantIsBestseller(false);
+      setVariantIsTrending(false);
+      setBlouseSizes([]);
+      setEditingIndex(null);
+    }
+    setPendingDeleteIndex(null);
     toast({ title: "Color variant removed" });
   };
 
@@ -920,6 +968,33 @@ export const ColorVariantEditor = forwardRef<ColorVariantEditorHandle, ColorVari
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={pendingDeleteIndex !== null} onOpenChange={(open) => { if (!open) setPendingDeleteIndex(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Color Variant?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the{" "}
+              <strong>
+                {pendingDeleteIndex !== null && variants[pendingDeleteIndex]
+                  ? variants[pendingDeleteIndex].color
+                  : "selected"}
+              </strong>{" "}
+              color variant and all its images from this product. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemoveVariant}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-variant"
+            >
+              Delete Variant
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 });

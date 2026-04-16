@@ -1762,13 +1762,9 @@ export default function InventoryManagement() {
                   disabled={editColorVariantMutation.isPending}
                   onClick={() => {
                     if (!editVariantProductData) return;
-                    let finalVariants = editVariantAllVariants;
-                    const currentVariant = editVariantEditorRef.current?.getCurrentVariant();
-                    if (currentVariant && editVariantIndex >= 0) {
-                      const updated = [...editVariantAllVariants];
-                      updated[editVariantIndex] = currentVariant;
-                      finalVariants = updated;
-                    }
+                    const finalVariants = editVariantEditorRef.current
+                      ? editVariantEditorRef.current.getUpdatedVariants(editVariantAllVariants)
+                      : editVariantAllVariants;
                     editColorVariantMutation.mutate({
                       productId: editVariantProductData._id,
                       variants: finalVariants,
