@@ -72,6 +72,7 @@ export default function InventoryManagement() {
   const [isLoadingAddVariant, setIsLoadingAddVariant] = useState(false);
   const [addVariantNewVariants, setAddVariantNewVariants] = useState<ColorVariant[]>([]);
   const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+  const [deleteVariantInfo, setDeleteVariantInfo] = useState<{ productId: string; variantIndex: number; variantColor: string } | null>(null);
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [editBlouseSizes, setEditBlouseSizes] = useState<Array<{ size: string; stockQuantity: number }>>([]);
   const [editNewSizeInput, setEditNewSizeInput] = useState("");
@@ -267,6 +268,31 @@ export default function InventoryManagement() {
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const deleteVariantMutation = useMutation({
+    mutationFn: async ({ productId, variantIndex }: { productId: string; variantIndex: number }) => {
+      const response = await fetch(`/api/products/${productId}`);
+      if (!response.ok) throw new Error("Failed to fetch product");
+      const fullProduct = await response.json();
+      const updatedVariants: ColorVariant[] = (fullProduct.colorVariants || []).filter((_: any, i: number) => i !== variantIndex);
+      const totalStock = updatedVariants.reduce((sum, v) => sum + (v.stockQuantity || 0), 0);
+      return apiRequest(`/api/admin/products/${productId}`, "PATCH", {
+        colorVariants: updatedVariants,
+        stockQuantity: totalStock,
+        inStock: totalStock > 0,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      toast({ title: "Color variant deleted successfully!" });
+      setDeleteVariantInfo(null);
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setDeleteVariantInfo(null);
     }
   });
 
@@ -1171,7 +1197,14 @@ export default function InventoryManagement() {
                                     variant="destructive"
                                     size="sm"
                                     className="h-8 w-8 p-0"
-                                    onClick={() => setDeleteProductId(variant._id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteVariantInfo({
+                                        productId: variant._id,
+                                        variantIndex: typeof variant.variantIndex === 'number' ? variant.variantIndex : 0,
+                                        variantColor: variant.variantColor || "this",
+                                      });
+                                    }}
                                     data-testid={`button-delete-variant-${variantKey}`}
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -1754,9 +1787,9 @@ export default function InventoryManagement() {
       <AlertDialog open={!!deleteProductId} onOpenChange={() => setDeleteProductId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Delete entire product?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this product. This action cannot be undone.
+              This will permanently delete this product and ALL its color variants. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1766,7 +1799,29 @@ export default function InventoryManagement() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-delete-confirm"
             >
-              {deleteProductMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteProductMutation.isPending ? "Deleting..." : "Delete Product"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteVariantInfo} onOpenChange={() => setDeleteVariantInfo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete color variant?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the <strong>{deleteVariantInfo?.variantColor}</strong> color variant from this product. The rest of the product and its other variants will not be affected. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-delete-variant-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteVariantInfo && deleteVariantMutation.mutate({ productId: deleteVariantInfo.productId, variantIndex: deleteVariantInfo.variantIndex })}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-delete-variant-confirm"
+              disabled={deleteVariantMutation.isPending}
+            >
+              {deleteVariantMutation.isPending ? "Deleting..." : "Delete Variant"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

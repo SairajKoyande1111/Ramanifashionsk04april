@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs";
 import { randomBytes } from "crypto";
+import sharp from "sharp";
 
 const IMAGES_DIR = path.join(process.cwd(), "public", "images");
 
@@ -74,6 +75,82 @@ export function extractCategoryImageUrls(category: any): string[] {
   return urls;
 }
 
+async function compressImage(buffer: Buffer, originalName: string): Promise<{ buffer: Buffer; ext: string }> {
+  const TARGET_MIN = 600 * 1024;  // 600 KB
+  const TARGET_MAX = 1024 * 1024; // 1 MB
+
+  const originalSizeKB = (buffer.length / 1024).toFixed(1);
+
+  // If already within target range, skip compression
+  if (buffer.length >= TARGET_MIN && buffer.length <= TARGET_MAX) {
+    const ext = path.extname(originalName).toLowerCase() || ".jpg";
+    console.log(`[Compress] ${originalName} — already in range at ${originalSizeKB} KB, skipping compression`);
+    return { buffer, ext };
+  }
+
+  // If smaller than 600 KB, keep as-is (no upscaling)
+  if (buffer.length < TARGET_MIN) {
+    const ext = path.extname(originalName).toLowerCase() || ".jpg";
+    console.log(`[Compress] ${originalName} — ${originalSizeKB} KB (under 600 KB, keeping as-is)`);
+    return { buffer, ext };
+  }
+
+  // Image is over 1 MB — compress it
+  // We always output as JPEG for maximum compatibility and compression
+  const ext = ".jpg";
+
+  // Try quality levels from 85 down to 60 until we hit target
+  const qualityLevels = [85, 80, 75, 70, 65, 60];
+
+  for (const quality of qualityLevels) {
+    const compressed = await sharp(buffer)
+      .rotate() // auto-correct EXIF orientation
+      .jpeg({ quality, mozjpeg: true })
+      .toBuffer();
+
+    const compressedSizeKB = (compressed.length / 1024).toFixed(1);
+    console.log(`[Compress] ${originalName} — ${originalSizeKB} KB → quality ${quality} → ${compressedSizeKB} KB`);
+
+    if (compressed.length <= TARGET_MAX) {
+      console.log(`[Compress] ✓ Final size ${compressedSizeKB} KB at quality ${quality}`);
+      return { buffer: compressed, ext };
+    }
+  }
+
+  // If still over 1 MB after quality reduction, try resizing down while maintaining aspect ratio
+  const metadata = await sharp(buffer).metadata();
+  const widthSteps = [1600, 1400, 1200, 1000, 800];
+
+  for (const maxWidth of widthSteps) {
+    if (metadata.width && metadata.width <= maxWidth) continue;
+
+    const resized = await sharp(buffer)
+      .rotate()
+      .resize({ width: maxWidth, withoutEnlargement: true })
+      .jpeg({ quality: 75, mozjpeg: true })
+      .toBuffer();
+
+    const resizedSizeKB = (resized.length / 1024).toFixed(1);
+    console.log(`[Compress] ${originalName} — resized to ${maxWidth}px → ${resizedSizeKB} KB`);
+
+    if (resized.length <= TARGET_MAX) {
+      console.log(`[Compress] ✓ Final size ${resizedSizeKB} KB after resize to ${maxWidth}px`);
+      return { buffer: resized, ext };
+    }
+  }
+
+  // Last resort: resize to 800px with quality 60
+  const fallback = await sharp(buffer)
+    .rotate()
+    .resize({ width: 800, withoutEnlargement: true })
+    .jpeg({ quality: 60, mozjpeg: true })
+    .toBuffer();
+
+  const fallbackSizeKB = (fallback.length / 1024).toFixed(1);
+  console.log(`[Compress] ${originalName} — fallback result: ${fallbackSizeKB} KB`);
+  return { buffer: fallback, ext };
+}
+
 export async function uploadToCloudinary(
   buffer: Buffer,
   originalName: string,
@@ -83,14 +160,16 @@ export async function uploadToCloudinary(
     deleteLocalImage(oldUrl);
   }
 
-  const ext = path.extname(originalName).toLowerCase() || ".jpg";
+  const { buffer: compressedBuffer, ext } = await compressImage(buffer, originalName);
+
   const filename = randomBytes(16).toString("hex") + ext;
   const destPath = getLocalPath(filename);
 
-  fs.writeFileSync(destPath, buffer);
+  fs.writeFileSync(destPath, compressedBuffer);
 
-  const sizeMB = (buffer.length / 1024 / 1024).toFixed(2);
-  console.log(`[LocalStorage] Saved: ${filename} — ${sizeMB} MB — full quality, no compression`);
+  const sizeMB = (compressedBuffer.length / 1024 / 1024).toFixed(2);
+  const sizeKB = (compressedBuffer.length / 1024).toFixed(0);
+  console.log(`[LocalStorage] Saved: ${filename} — ${sizeKB} KB (${sizeMB} MB)`);
 
   return `/images/${filename}`;
 }

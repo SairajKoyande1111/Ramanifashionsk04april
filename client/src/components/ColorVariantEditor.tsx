@@ -79,7 +79,6 @@ export const ColorVariantEditor = forwardRef<ColorVariantEditorHandle, ColorVari
 
   useImperativeHandle(ref, () => ({
     getCurrentVariant: () => {
-      if (editingIndex === null) return null;
       const colorName = selectedColor.trim();
       if (!colorName) return null;
       const validImages = currentImages.filter(img => img.trim() !== "");
