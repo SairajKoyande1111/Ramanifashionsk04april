@@ -925,6 +925,16 @@ export default function ProductDetail() {
                         </span>
                       </div>
                     )}
+                    {currentColorVariant?.sku && (
+                      <div>
+                        <span className="font-semibold text-foreground">
+                          SKU:{" "}
+                        </span>
+                        <span className="text-muted-foreground font-mono">
+                          {currentColorVariant.sku}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -1032,7 +1042,7 @@ export default function ProductDetail() {
                     <div className="flex flex-col items-center text-center p-4 border rounded-md">
                       <BadgeCheck className="h-8 w-8 text-primary mb-2" />
                       <span className="text-sm font-semibold text-foreground">
-                        Original Product Stamp
+                        Original Product
                       </span>
                       <span className="text-xs text-muted-foreground">
                         Authenticity guaranteed

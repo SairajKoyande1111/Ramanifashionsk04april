@@ -86,7 +86,7 @@ export default function Header({ cartCount = 0, wishlistCount = 0, onMenuClick }
   const [user, setUser] = useState<any>(null);
   const [storageUpdateTrigger, setStorageUpdateTrigger] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(true);
   const [openMobileSubCategory, setOpenMobileSubCategory] = useState<string | null>(null);
   const [hoveredMainCategory, setHoveredMainCategory] = useState<string | null>(null);
   const { isLoginOpen, openLogin, closeLogin } = useAuthUI();
