@@ -6,8 +6,9 @@ import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Upload, Check, Trash2, Monitor, Smartphone, Image } from "lucide-react";
+import { AlertCircle, Upload, Check, Trash2, Monitor, Smartphone, Image, Link as LinkIcon, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -19,16 +20,129 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface BannerItem {
   _id: string;
   url: string;
   order: number;
+  categoryLink: string;
 }
 
 interface HeroBannersData {
   desktop: BannerItem[];
   mobile: BannerItem[];
+}
+
+interface CategoryItem {
+  _id: string;
+  name: string;
+  slug: string;
+  subCategories?: { name: string; slug: string }[];
+}
+
+function buildCategoryOptions(categories: CategoryItem[]) {
+  const options: { label: string; value: string }[] = [
+    { label: "No link (not clickable)", value: "" },
+  ];
+  for (const cat of categories) {
+    options.push({ label: cat.name, value: `/products?category=${encodeURIComponent(cat.name)}` });
+    if (cat.subCategories) {
+      for (const sub of cat.subCategories) {
+        options.push({ label: `  ${cat.name} › ${sub.name}`, value: `/products?category=${encodeURIComponent(sub.name)}` });
+      }
+    }
+  }
+  return options;
+}
+
+function CategoryLinkDialog({
+  bannerId,
+  currentLink,
+  onClose,
+  categoryOptions,
+  adminToken,
+}: {
+  bannerId: string;
+  currentLink: string;
+  onClose: () => void;
+  categoryOptions: { label: string; value: string }[];
+  adminToken: string;
+}) {
+  const { toast } = useToast();
+  const [selected, setSelected] = useState(currentLink || "");
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/admin/hero-banners/${bannerId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ categoryLink: selected }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Update failed");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Banner link updated!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/hero-banners"] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Set Banner Category Link</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          When a visitor clicks this banner, they will be taken to the selected category page.
+        </p>
+        <div className="space-y-3 pt-2">
+          <Label>Link to Category</Label>
+          <Select value={selected} onValueChange={setSelected}>
+            <SelectTrigger data-testid="select-banner-category-link">
+              <SelectValue placeholder="Choose category..." />
+            </SelectTrigger>
+            <SelectContent>
+              {categoryOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selected && (
+            <p className="text-xs text-muted-foreground">Redirects to: <span className="font-mono">{selected}</span></p>
+          )}
+        </div>
+        <div className="flex gap-3 pt-2">
+          <Button
+            onClick={() => updateMutation.mutate()}
+            disabled={updateMutation.isPending}
+            data-testid="button-save-banner-link"
+          >
+            {updateMutation.isPending ? "Saving..." : "Save Link"}
+          </Button>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function CarouselUploadSection({
@@ -37,18 +151,22 @@ function CarouselUploadSection({
   description,
   icon: Icon,
   aspectHint,
+  categoryOptions,
 }: {
   type: "desktop" | "mobile";
   label: string;
   description: string;
   icon: React.ElementType;
   aspectHint: string;
+  categoryOptions: { label: string; value: string }[];
 }) {
   const { toast } = useToast();
-  const adminToken = localStorage.getItem("adminToken");
+  const adminToken = localStorage.getItem("adminToken") ?? "";
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [linkBanner, setLinkBanner] = useState<BannerItem | null>(null);
+  const [uploadCategoryLink, setUploadCategoryLink] = useState("");
 
   const { data: bannersData, isLoading } = useQuery<HeroBannersData>({
     queryKey: ["/api/hero-banners"],
@@ -73,6 +191,7 @@ function CarouselUploadSection({
       toast({ title: `${label} image uploaded!` });
       setSelectedFile(null);
       setPreview(null);
+      setUploadCategoryLink("");
       queryClient.invalidateQueries({ queryKey: ["/api/hero-banners"] });
     },
     onError: (error: any) => {
@@ -111,125 +230,172 @@ function CarouselUploadSection({
     const formData = new FormData();
     formData.append("image", selectedFile);
     formData.append("type", type);
+    if (uploadCategoryLink) formData.append("categoryLink", uploadCategoryLink);
     uploadMutation.mutate(formData);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Icon className="h-5 w-5 text-pink-600" />
-          {label}
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        ) : slides.length > 0 ? (
-          <div>
-            <p className="text-sm font-medium mb-3">Current Slides ({slides.length})</p>
-            <div className={`grid gap-3 ${type === "mobile" ? "grid-cols-3 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"}`}>
-              {slides.map((slide, index) => (
-                <div key={slide._id} className="relative group rounded-lg overflow-hidden border border-border">
-                  <img
-                    src={`${slide.url}?t=${Date.now()}`}
-                    alt={`${label} ${index + 1}`}
-                    className={`w-full object-cover ${type === "mobile" ? "aspect-[9/16]" : "aspect-video"}`}
-                    data-testid={`img-${type}-banner-${index}`}
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setDeleteId(slide._id)}
-                      data-testid={`button-delete-${type}-${index}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Icon className="h-5 w-5 text-pink-600" />
+            {label}
+          </CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : slides.length > 0 ? (
+            <div>
+              <p className="text-sm font-medium mb-3">Current Slides ({slides.length})</p>
+              <div className={`grid gap-3 ${type === "mobile" ? "grid-cols-3 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-3"}`}>
+                {slides.map((slide, index) => (
+                  <div key={slide._id} className="relative group rounded-lg overflow-hidden border border-border">
+                    <img
+                      src={`${slide.url}?t=${Date.now()}`}
+                      alt={`${label} ${index + 1}`}
+                      className={`w-full object-cover ${type === "mobile" ? "aspect-[9/16]" : "aspect-video"}`}
+                      data-testid={`img-${type}-banner-${index}`}
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setLinkBanner(slide)}
+                        data-testid={`button-link-${type}-${index}`}
+                        title="Set category link"
+                      >
+                        <LinkIcon className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setDeleteId(slide._id)}
+                        data-testid={`button-delete-${type}-${index}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+                      #{index + 1}
+                    </div>
+                    {slide.categoryLink && (
+                      <div className="absolute top-1 right-1 bg-green-600 text-white rounded-full p-0.5" title={`Links to: ${slide.categoryLink}`}>
+                        <LinkIcon className="h-3 w-3" />
+                      </div>
+                    )}
                   </div>
-                  <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
-                    #{index + 1}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-            <Image className="h-4 w-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">No {type} banners uploaded yet</p>
-          </div>
-        )}
-
-        <div className="border-t pt-4 space-y-3">
-          <p className="text-sm font-medium">Add New Slide</p>
-          <p className="text-xs text-muted-foreground">{aspectHint}</p>
-          {preview && (
-            <div className="p-2 bg-muted rounded-lg">
-              <img
-                src={preview}
-                alt="Preview"
-                className={`mx-auto object-cover rounded ${type === "mobile" ? "max-h-40 max-w-24" : "max-h-32 max-w-full"}`}
-              />
-              <p className="text-xs text-muted-foreground mt-1">{selectedFile?.name}</p>
+          ) : (
+            <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+              <Image className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">No {type} banners uploaded yet</p>
             </div>
           )}
-          <div className="flex items-center gap-3">
-            <Label
-              htmlFor={`carousel-${type}`}
-              className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-200 rounded-md hover:bg-pink-200 dark:hover:bg-pink-800 text-sm"
-            >
-              <Upload className="h-4 w-4" />
-              Choose Image
-            </Label>
-            <input
-              id={`carousel-${type}`}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-              data-testid={`input-${type}-carousel-image`}
-            />
-            {selectedFile && (
-              <>
-                <Check className="h-5 w-5 text-green-600" />
-                <Button
-                  size="sm"
-                  onClick={handleUpload}
-                  disabled={uploadMutation.isPending}
-                  data-testid={`button-upload-${type}-carousel`}
-                >
-                  {uploadMutation.isPending ? "Uploading..." : "Upload Slide"}
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </CardContent>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Banner Slide?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this slide from the {type} carousel. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
-              className="bg-red-600 hover:bg-red-700"
-              data-testid="button-confirm-delete-banner"
-            >
-              Remove Slide
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </Card>
+          <div className="border-t pt-4 space-y-3">
+            <p className="text-sm font-medium">Add New Slide</p>
+            <p className="text-xs text-muted-foreground">{aspectHint}</p>
+            {preview && (
+              <div className="p-2 bg-muted rounded-lg">
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className={`mx-auto object-cover rounded ${type === "mobile" ? "max-h-40 max-w-24" : "max-h-32 max-w-full"}`}
+                />
+                <p className="text-xs text-muted-foreground mt-1">{selectedFile?.name}</p>
+              </div>
+            )}
+
+            {selectedFile && categoryOptions.length > 0 && (
+              <div className="space-y-1">
+                <Label className="text-sm">Link this banner to a category (optional)</Label>
+                <Select value={uploadCategoryLink} onValueChange={setUploadCategoryLink}>
+                  <SelectTrigger data-testid={`select-upload-category-${type}`}>
+                    <SelectValue placeholder="No link (not clickable)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value === "" ? "__none__" : opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <Label
+                htmlFor={`carousel-${type}`}
+                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-200 rounded-md hover:bg-pink-200 dark:hover:bg-pink-800 text-sm"
+              >
+                <Upload className="h-4 w-4" />
+                Choose Image
+              </Label>
+              <input
+                id={`carousel-${type}`}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+                data-testid={`input-${type}-carousel-image`}
+              />
+              {selectedFile && (
+                <>
+                  <Check className="h-5 w-5 text-green-600" />
+                  <Button
+                    size="sm"
+                    onClick={handleUpload}
+                    disabled={uploadMutation.isPending}
+                    data-testid={`button-upload-${type}-carousel`}
+                  >
+                    {uploadMutation.isPending ? "Uploading..." : "Upload Slide"}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+
+        <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove Banner Slide?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this slide from the {type} carousel. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+                className="bg-red-600 hover:bg-red-700"
+                data-testid="button-confirm-delete-banner"
+              >
+                Remove Slide
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </Card>
+
+      {linkBanner && (
+        <CategoryLinkDialog
+          bannerId={linkBanner._id}
+          currentLink={linkBanner.categoryLink}
+          categoryOptions={categoryOptions}
+          adminToken={adminToken}
+          onClose={() => setLinkBanner(null)}
+        />
+      )}
+    </>
   );
 }
 
@@ -242,6 +408,12 @@ export default function MediaManagement() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [previewBanner, setPreviewBanner] = useState<string | null>(null);
   const [previewVideo, setPreviewVideo] = useState<string | null>(null);
+
+  const { data: categories = [] } = useQuery<CategoryItem[]>({
+    queryKey: ["/api/categories"],
+  });
+
+  const categoryOptions = buildCategoryOptions(categories);
 
   if (!adminToken) {
     setLocation("/admin/login");
@@ -327,7 +499,7 @@ export default function MediaManagement() {
           <Alert className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Hero carousel: Add multiple slides for desktop and mobile independently. The website will automatically show the correct version based on the visitor's device.
+              Hero carousel: Add multiple slides for desktop and mobile independently. Hover over a slide and click the <strong>link icon</strong> to make it redirect to a category when visitors click on it.
             </AlertDescription>
           </Alert>
 
@@ -338,6 +510,7 @@ export default function MediaManagement() {
               description="Landscape images shown on tablets and desktops. Each uploaded image becomes a carousel slide."
               icon={Monitor}
               aspectHint="Recommended: 1920×1080 (16:9 landscape). Upload one image at a time to add slides."
+              categoryOptions={categoryOptions}
             />
 
             <CarouselUploadSection
@@ -346,6 +519,7 @@ export default function MediaManagement() {
               description="Portrait images shown on mobile phones. Each uploaded image becomes a carousel slide."
               icon={Smartphone}
               aspectHint="Recommended size: 1080 × 1350 px (4:5 portrait ratio). This matches the banner height on mobile screens. Minimum width: 1080 px."
+              categoryOptions={categoryOptions}
             />
 
             <form onSubmit={handleSubmit} className="space-y-6">

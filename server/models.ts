@@ -399,6 +399,7 @@ const heroBannerSchema = new Schema({
   type: { type: String, enum: ['desktop', 'mobile'], required: true },
   filename: { type: String, required: true },
   order: { type: Number, default: 0 },
+  categoryLink: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },
 });
 

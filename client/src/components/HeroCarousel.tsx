@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 interface BannerItem {
   _id: string;
   url: string;
   order: number;
+  categoryLink: string;
 }
 
 interface HeroBannersData {
@@ -16,11 +18,12 @@ function Carousel({
   slides,
   className,
 }: {
-  slides: string[];
+  slides: BannerItem[];
   className?: string;
 }) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const totalSlides = slides.length;
+  const [, navigate] = useLocation();
 
   const goNext = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % totalSlides);
@@ -38,19 +41,28 @@ function Carousel({
 
   if (slides.length === 0) return null;
 
+  const handleBannerClick = (slide: BannerItem) => {
+    if (slide.categoryLink) {
+      navigate(slide.categoryLink);
+    }
+  };
+
   return (
     <div className={`relative w-full overflow-hidden ${className ?? ""}`}>
-      {slides.map((src, index) => (
+      {slides.map((slide, index) => (
         <div
-          key={src}
+          key={slide._id}
           className="absolute inset-0 transition-opacity duration-700"
           style={{
             opacity: index === currentSlide ? 1 : 0,
             zIndex: index === currentSlide ? 1 : 0,
+            cursor: slide.categoryLink ? "pointer" : "default",
           }}
+          onClick={() => index === currentSlide && handleBannerClick(slide)}
+          data-testid={`slide-hero-banner-${index}`}
         >
           <img
-            src={src}
+            src={slide.url}
             alt={`Ramani Fashion Banner ${index + 1}`}
             className="w-full h-full object-cover object-center"
             data-testid={`img-hero-banner-${index}`}
@@ -64,7 +76,7 @@ function Carousel({
           {slides.map((_, index) => (
             <button
               key={index}
-              onClick={() => setCurrentSlide(index)}
+              onClick={(e) => { e.stopPropagation(); setCurrentSlide(index); }}
               className={`w-2 h-2 rounded-full transition-all ${
                 index === currentSlide ? "bg-white w-5" : "bg-white/60"
               }`}
@@ -95,25 +107,21 @@ export default function HeroCarousel() {
   const desktopSlides = bannersData?.desktop ?? [];
   const mobileSlides = bannersData?.mobile ?? [];
 
-  const desktopSrcs =
-    desktopSlides.length > 0
-      ? desktopSlides.map((b) => b.url)
-      : legacyDesktop
-      ? [legacyDesktop]
-      : [];
+  const legacySlide: BannerItem | null = legacyDesktop
+    ? { _id: "legacy", url: legacyDesktop, order: 0, categoryLink: "" }
+    : null;
 
-  const mobileSrcs =
-    mobileSlides.length > 0
-      ? mobileSlides.map((b) => b.url)
-      : legacyDesktop
-      ? [legacyDesktop]
-      : [];
+  const desktopItems: BannerItem[] =
+    desktopSlides.length > 0 ? desktopSlides : legacySlide ? [legacySlide] : [];
+
+  const mobileItems: BannerItem[] =
+    mobileSlides.length > 0 ? mobileSlides : legacySlide ? [legacySlide] : [];
 
   const desktopStyle = { height: "65vh", maxHeight: "620px", backgroundColor: "#fff" };
   const mobileStyle = { height: "125vw", maxHeight: "860px", backgroundColor: "#fff" };
 
-  const showDesktop = desktopSrcs.length > 0;
-  const showMobile = mobileSrcs.length > 0;
+  const showDesktop = desktopItems.length > 0;
+  const showMobile = mobileItems.length > 0;
 
   if (!showDesktop && !showMobile) {
     return (
@@ -129,7 +137,7 @@ export default function HeroCarousel() {
       {/* Desktop carousel — hidden on mobile */}
       <div className="hidden md:block w-full" style={desktopStyle}>
         {showDesktop ? (
-          <Carousel slides={desktopSrcs} className="h-full" />
+          <Carousel slides={desktopItems} className="h-full" />
         ) : (
           <div className="w-full h-full bg-pink-50" />
         )}
@@ -138,7 +146,7 @@ export default function HeroCarousel() {
       {/* Mobile carousel — hidden on desktop */}
       <div className="block md:hidden w-full" style={mobileStyle}>
         {showMobile ? (
-          <Carousel slides={mobileSrcs} className="h-full" />
+          <Carousel slides={mobileItems} className="h-full" />
         ) : (
           <div className="w-full h-full bg-pink-50" />
         )}

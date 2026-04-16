@@ -55,7 +55,7 @@ export default function InventoryManagement() {
   const adminToken = localStorage.getItem("adminToken");
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("stock");
+  const [sortBy, setSortBy] = useState("none");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterStockStatus, setFilterStockStatus] = useState("all");
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
@@ -654,24 +654,26 @@ export default function InventoryManagement() {
       }
     });
 
-    groups.sort((a: any, b: any) => {
-      const pa = a.product;
-      const pb = b.product;
-      switch (sortBy) {
-        case "name":
-          return (pa.name || "").localeCompare(pb.name || "");
-        case "stock":
-          return (pa.stockQuantity || 0) - (pb.stockQuantity || 0);
-        case "stockDesc":
-          return (pb.stockQuantity || 0) - (pa.stockQuantity || 0);
-        case "price":
-          return (pa.price || 0) - (pb.price || 0);
-        case "category":
-          return (pa.category || "").localeCompare(pb.category || "");
-        default:
-          return 0;
-      }
-    });
+    if (sortBy !== "none") {
+      groups.sort((a: any, b: any) => {
+        const pa = a.product;
+        const pb = b.product;
+        switch (sortBy) {
+          case "name":
+            return (pa.name || "").localeCompare(pb.name || "");
+          case "stock":
+            return (pa.stockQuantity || 0) - (pb.stockQuantity || 0);
+          case "stockDesc":
+            return (pb.stockQuantity || 0) - (pa.stockQuantity || 0);
+          case "price":
+            return (pa.price || 0) - (pb.price || 0);
+          case "category":
+            return (pa.category || "").localeCompare(pb.category || "");
+          default:
+            return 0;
+        }
+      });
+    }
 
     return groups;
   }, [inventory, searchQuery, filterCategory, filterStockStatus, sortBy]);
@@ -928,6 +930,7 @@ export default function InventoryManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none" data-testid="option-sort-none">Newest First</SelectItem>
                   <SelectItem value="stock" data-testid="option-sort-stock-asc">Stock (Low to High)</SelectItem>
                   <SelectItem value="stockDesc" data-testid="option-sort-stock-desc">Stock (High to Low)</SelectItem>
                   <SelectItem value="name" data-testid="option-sort-name">Name (A-Z)</SelectItem>

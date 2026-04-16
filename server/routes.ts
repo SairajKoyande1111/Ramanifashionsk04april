@@ -2293,8 +2293,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/inventory", authenticateAdmin, async (req, res) => {
     try {
       const products = await Product.find()
-        .select('name category subcategory stockQuantity inStock price colorVariants')
-        .sort({ stockQuantity: 1 })
+        .select('name category subcategory stockQuantity inStock price colorVariants createdAt')
+        .sort({ createdAt: -1 })
         .lean();
 
       res.json(products);
@@ -4081,13 +4081,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         _id: b._id,
         url: `/media/hero-banners/${b.filename}`,
         order: b.order,
+        categoryLink: b.categoryLink || '',
       }));
       const mobile = banners.filter((b: any) => b.type === 'mobile').map((b: any) => ({
         _id: b._id,
         url: `/media/hero-banners/${b.filename}`,
         order: b.order,
+        categoryLink: b.categoryLink || '',
       }));
       res.json({ desktop, mobile });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/admin/hero-banners/:id", authenticateAdmin, async (req, res) => {
+    try {
+      const { categoryLink } = req.body;
+      const banner = await HeroBanner.findByIdAndUpdate(
+        req.params.id,
+        { categoryLink: categoryLink || '' },
+        { new: true }
+      ).lean();
+      if (!banner) return res.status(404).json({ error: 'Banner not found' });
+      res.json({ success: true, banner });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -4124,10 +4141,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fs.unlinkSync(files.image[0].path);
 
         const count = await HeroBanner.countDocuments({ type });
-        const banner = new HeroBanner({ type, filename, order: count });
+        const categoryLink = req.body.categoryLink || '';
+        const banner = new HeroBanner({ type, filename, order: count, categoryLink });
         await banner.save();
 
-        res.json({ success: true, banner: { _id: banner._id, url: `/media/hero-banners/${filename}`, order: banner.order } });
+        res.json({ success: true, banner: { _id: banner._id, url: `/media/hero-banners/${filename}`, order: banner.order, categoryLink: banner.categoryLink } });
       } catch (error: any) {
         res.status(500).json({ error: error.message });
       }
