@@ -46,8 +46,29 @@ export default function ProductDetail() {
   const touchStartY = useRef(0);
   const isSwiping = useRef(false);
 
+  const [pinchScale, setPinchScale] = useState(1);
+  const pinchScaleRef = useRef(1);
+  const pinchStartDist = useRef(0);
+  const pinchStartScale = useRef(1);
+  const isPinching = useRef(false);
+  const pinchOrigin = useRef({ x: 50, y: 50 });
+
+  const getTouchDistance = (touches: React.TouchList) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 1) {
+    if (e.touches.length === 2) {
+      isPinching.current = true;
+      pinchStartDist.current = getTouchDistance(e.touches);
+      pinchStartScale.current = pinchScaleRef.current;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const midX = ((e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left) / rect.width * 100;
+      const midY = ((e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top) / rect.height * 100;
+      pinchOrigin.current = { x: midX, y: midY };
+    } else if (e.touches.length === 1 && !isPinching.current) {
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
       isSwiping.current = false;
@@ -55,7 +76,13 @@ export default function ProductDetail() {
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 1) {
+    if (e.touches.length === 2 && isPinching.current) {
+      const dist = getTouchDistance(e.touches);
+      const newScale = Math.max(1, Math.min(4, pinchStartScale.current * (dist / pinchStartDist.current)));
+      pinchScaleRef.current = newScale;
+      setPinchScale(newScale);
+    } else if (e.touches.length === 1 && !isPinching.current) {
+      if (pinchScaleRef.current > 1.05) return;
       const dx = Math.abs(e.touches[0].clientX - touchStartX.current);
       const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
       if (dx > dy && dx > 10) isSwiping.current = true;
@@ -63,13 +90,25 @@ export default function ProductDetail() {
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (isSwiping.current) {
+    if (e.touches.length < 2 && isPinching.current) {
+      if (e.touches.length === 0) {
+        isPinching.current = false;
+        if (pinchScaleRef.current < 1.1) {
+          pinchScaleRef.current = 1;
+          setPinchScale(1);
+        }
+      }
+      return;
+    }
+    if (isSwiping.current && pinchScaleRef.current <= 1.05) {
       const dx = e.changedTouches[0].clientX - touchStartX.current;
       if (Math.abs(dx) > 50) {
         setSelectedImage(prev => {
           if (dx < 0) return Math.min(prev + 1, images.length - 1);
           return Math.max(prev - 1, 0);
         });
+        pinchScaleRef.current = 1;
+        setPinchScale(1);
       }
     }
     isSwiping.current = false;
@@ -110,6 +149,9 @@ export default function ProductDetail() {
     setSelectedImage(0);
     setIsZooming(false);
     hasMoved.current = false;
+    setPinchScale(1);
+    pinchScaleRef.current = 1;
+    isPinching.current = false;
   }, [id]);
 
   const { data: product, isLoading } = useQuery({
@@ -462,15 +504,19 @@ export default function ProductDetail() {
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                style={{ cursor: isZooming ? 'zoom-in' : 'default', touchAction: 'pan-y' }}
+                style={{ cursor: isZooming ? 'zoom-in' : 'default', touchAction: pinchScale > 1 ? 'none' : 'pan-y' }}
               >
                 <img
                   src={images[selectedImage] || "/default-saree.jpg"}
                   alt={product.name}
                   className="w-full h-auto aspect-[2/3] object-cover transition-transform duration-100 ease-out"
                   style={{
-                    transform: isZooming ? 'scale(2.2)' : 'scale(1)',
-                    transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+                    transform: pinchScale > 1
+                      ? `scale(${pinchScale})`
+                      : isZooming ? 'scale(2.2)' : 'scale(1)',
+                    transformOrigin: pinchScale > 1
+                      ? `${pinchOrigin.current.x}% ${pinchOrigin.current.y}%`
+                      : `${zoomPos.x}% ${zoomPos.y}%`,
                   }}
                   data-testid="img-product-main"
                   onError={(e) => { e.currentTarget.src = '/default-saree.jpg'; }}
@@ -488,9 +534,14 @@ export default function ProductDetail() {
                     🔍 Hover to zoom
                   </div>
                 )}
-                {images.length > 1 && (
+                {images.length > 1 && pinchScale <= 1 && (
                   <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full pointer-events-none select-none md:hidden">
-                    ← Swipe →
+                    Swipe · Pinch to zoom
+                  </div>
+                )}
+                {pinchScale > 1 && (
+                  <div className="absolute bottom-3 right-3 bg-black/50 text-white text-xs px-2 py-1 rounded-full pointer-events-none select-none md:hidden">
+                    Pinch to zoom out
                   </div>
                 )}
               </motion.div>

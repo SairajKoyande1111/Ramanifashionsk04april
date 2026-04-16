@@ -749,6 +749,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/reviews/upload-image", authenticateToken, (req, res) => {
+    if (req.user.type !== 'customer') {
+      return res.status(403).json({ error: 'Only customers can upload review images' });
+    }
+    upload.single("image")(req, res, async (err: any) => {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: err.message });
+      } else if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      try {
+        if (!req.file) return res.status(400).json({ error: 'No image provided' });
+        const url = await uploadToCloudinary(req.file.buffer, req.file.originalname);
+        res.json({ url });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    });
+  });
+
   app.put("/api/reviews/:reviewId/helpful", authenticateToken, async (req, res) => {
     try {
       const { reviewId } = req.params;
