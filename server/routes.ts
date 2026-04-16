@@ -10,7 +10,7 @@ import path from "path";
 import fs from "fs";
 import XLSX from "xlsx";
 import { upload, mediaUpload } from "./upload-config";
-import { uploadToCloudinary } from "./cloudinary-service";
+import { uploadToCloudinary, deleteLocalImages, extractProductImageUrls, extractCategoryImageUrls } from "./cloudinary-service";
 import { sendSMSOTP, generateOTP, sendOrderConfirmationSMS, sendPaymentFailureSMS, sendOrderAcceptedSMS, sendOrderCancelledSMS, sendOrderShippedSMS, sendOrderDeliveredSMS } from "./sms-service";
 import { sendOrderConfirmation } from "./whatsapp-service";
 import { phonePeService } from "./phonepe-service";
@@ -117,6 +117,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE a category (admin)
   app.delete("/api/admin/categories/:id", authenticateAdmin, async (req, res) => {
     try {
+      const category = await Category.findById(req.params.id);
+      if (category) {
+        deleteLocalImages(extractCategoryImageUrls(category));
+      }
       await Category.findByIdAndDelete(req.params.id);
       res.json({ success: true });
     } catch (err) {
@@ -2178,12 +2182,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateData.inStock = updateData.stockQuantity > 0;
       }
       if (typeof updateData.subcategory === 'string') updateData.subcategory = updateData.subcategory.trim();
-      
-      // Automatically set inStock based on stockQuantity
+
       if (updateData.stockQuantity !== undefined) {
         updateData.inStock = updateData.stockQuantity > 0;
       }
-      
+
+      // Before updating, find the old product and delete any images that are being removed
+      const oldProduct = await Product.findById(req.params.id);
+      if (oldProduct) {
+        const oldUrls = new Set(extractProductImageUrls(oldProduct));
+        const newUrls = new Set(extractProductImageUrls(updateData));
+        const removed = [...oldUrls].filter(url => !newUrls.has(url));
+        deleteLocalImages(removed);
+      }
+
       const product = await Product.findByIdAndUpdate(
         req.params.id,
         updateData,
@@ -2200,10 +2212,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/admin/products/:id", authenticateAdmin, async (req, res) => {
     try {
-      const product = await Product.findByIdAndDelete(req.params.id);
+      const product = await Product.findById(req.params.id);
       if (!product) {
         return res.status(404).json({ error: 'Product not found' });
       }
+      deleteLocalImages(extractProductImageUrls(product));
+      await product.deleteOne();
       res.json({ message: 'Product deleted successfully' });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

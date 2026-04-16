@@ -22,6 +22,7 @@ function urlToFilePath(url: string): string | null {
 }
 
 export function deleteLocalImage(url: string): void {
+  if (!url) return;
   const filePath = urlToFilePath(url);
   if (filePath && fs.existsSync(filePath)) {
     try {
@@ -31,6 +32,46 @@ export function deleteLocalImage(url: string): void {
       console.error(`[LocalStorage] Failed to delete old image: ${filePath}`, err);
     }
   }
+}
+
+export function deleteLocalImages(urls: (string | undefined | null)[]): void {
+  for (const url of urls) {
+    if (url) deleteLocalImage(url);
+  }
+}
+
+export function extractProductImageUrls(product: any): string[] {
+  const urls: string[] = [];
+  if (Array.isArray(product.images)) {
+    for (const img of product.images) {
+      if (typeof img === "string" && img.startsWith("/images/")) urls.push(img);
+    }
+  }
+  if (Array.isArray(product.colorVariants)) {
+    for (const variant of product.colorVariants) {
+      if (Array.isArray(variant.images)) {
+        for (const img of variant.images) {
+          if (typeof img === "string" && img.startsWith("/images/")) urls.push(img);
+        }
+      }
+    }
+  }
+  return urls;
+}
+
+export function extractCategoryImageUrls(category: any): string[] {
+  const urls: string[] = [];
+  if (typeof category.image === "string" && category.image.startsWith("/images/")) {
+    urls.push(category.image);
+  }
+  if (Array.isArray(category.subCategories)) {
+    for (const sub of category.subCategories) {
+      if (typeof sub.image === "string" && sub.image.startsWith("/images/")) {
+        urls.push(sub.image);
+      }
+    }
+  }
+  return urls;
 }
 
 export async function uploadToCloudinary(
