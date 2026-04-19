@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthUI } from "@/contexts/AuthUIContext";
+import { auth } from "@/lib/auth";
 
 export default function Checkout() {
   const { toast } = useToast();
@@ -29,16 +30,19 @@ export default function Checkout() {
     }
   }, [openLogin, toast]);
   
-  const [addressData, setAddressData] = useState({
-    fullName: "",
-    phone: "",
-    pincode: "",
-    address: "",
-    locality: "",
-    city: "",
-    state: "",
-    landmark: "",
-    addressType: "home" as "home" | "office",
+  const [addressData, setAddressData] = useState(() => {
+    const customer = auth.getCustomer();
+    return {
+      fullName: "",
+      phone: customer?.phone || "",
+      pincode: "",
+      address: "",
+      locality: "",
+      city: "",
+      state: "",
+      landmark: "",
+      addressType: "home" as "home" | "office",
+    };
   });
 
   const { data: cart, isLoading: cartLoading, isFetching: cartFetching } = useQuery({
@@ -52,18 +56,6 @@ export default function Checkout() {
   const { data: settings, isLoading: settingsLoading, isFetching: settingsFetching } = useQuery({
     queryKey: ["/api/settings"],
   });
-
-  const { data: profileData } = useQuery<any>({
-    queryKey: ["/api/auth/me"],
-    enabled: !!localStorage.getItem("token"),
-    retry: false,
-  });
-
-  useEffect(() => {
-    if (profileData?.phone) {
-      setAddressData((prev) => ({ ...prev, phone: prev.phone || profileData.phone }));
-    }
-  }, [profileData]);
 
   const createAddressMutation = useMutation({
     mutationFn: (data: any) => apiRequest("/api/addresses", "POST", data),
@@ -342,14 +334,23 @@ export default function Checkout() {
                 <CardTitle>Payment Method</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center space-x-2 p-3 border rounded-md border-primary bg-primary/5">
-                  <RadioGroup value="phonepe">
-                    <RadioGroupItem value="phonepe" id="phonepe" data-testid="radio-phonepe" checked />
-                  </RadioGroup>
-                  <Label htmlFor="phonepe" className="flex-1 cursor-pointer font-medium">
-                    PhonePe / UPI / Cards / Net Banking
-                  </Label>
-                </div>
+                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                  {/* COD hidden — uncomment to re-enable */}
+                  <div className="hidden">
+                    <div className="flex items-center space-x-2 p-3 border rounded-md hover-elevate">
+                      <RadioGroupItem value="cod" id="cod" data-testid="radio-cod" />
+                      <Label htmlFor="cod" className="flex-1 cursor-pointer">
+                        Cash on Delivery
+                      </Label>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 p-3 border rounded-md border-primary bg-primary/5">
+                    <RadioGroupItem value="phonepe" id="phonepe" data-testid="radio-phonepe" />
+                    <Label htmlFor="phonepe" className="flex-1 cursor-pointer font-medium">
+                      PhonePe / UPI / Cards / Net Banking
+                    </Label>
+                  </div>
+                </RadioGroup>
               </CardContent>
             </Card>
           </div>
