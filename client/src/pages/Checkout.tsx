@@ -117,7 +117,7 @@ export default function Checkout() {
     );
   }
 
-  const items = (cart as any)?.items || [];
+  const items = ((cart as any)?.items || []).filter((item: any) => item.productId != null);
   const subtotal = items.reduce((sum: number, item: any) => {
     return sum + (item.productId?.price || 0) * item.quantity;
   }, 0);
