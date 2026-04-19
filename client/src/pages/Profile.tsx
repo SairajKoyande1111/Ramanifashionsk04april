@@ -27,9 +27,9 @@ export default function Profile() {
     dob: "",
   });
 
-  const [addressData, setAddressData] = useState({
+  const [addressData, setAddressData] = useState(() => ({
     fullName: "",
-    phone: "",
+    phone: auth.getCustomer()?.phone || "",
     pincode: "",
     address: "",
     locality: "",
@@ -38,7 +38,7 @@ export default function Profile() {
     landmark: "",
     addressType: "home" as "home" | "office",
     isDefault: false,
-  });
+  }));
 
   const { data: user, isLoading: userLoading, isError: userError, error: userFetchError } = useQuery({
     queryKey: ["/api/auth/me"],
@@ -116,7 +116,7 @@ export default function Profile() {
   const resetAddressForm = () => {
     setAddressData({
       fullName: "",
-      phone: "",
+      phone: auth.getCustomer()?.phone || "",
       pincode: "",
       address: "",
       locality: "",
