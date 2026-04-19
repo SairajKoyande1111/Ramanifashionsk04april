@@ -17,7 +17,7 @@ export default function Checkout() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { openLogin } = useAuthUI();
-  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [paymentMethod, setPaymentMethod] = useState("phonepe");
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
 
@@ -52,6 +52,18 @@ export default function Checkout() {
   const { data: settings, isLoading: settingsLoading, isFetching: settingsFetching } = useQuery({
     queryKey: ["/api/settings"],
   });
+
+  const { data: profileData } = useQuery<any>({
+    queryKey: ["/api/auth/me"],
+    enabled: !!localStorage.getItem("token"),
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (profileData?.phone) {
+      setAddressData((prev) => ({ ...prev, phone: prev.phone || profileData.phone }));
+    }
+  }, [profileData]);
 
   const createAddressMutation = useMutation({
     mutationFn: (data: any) => apiRequest("/api/addresses", "POST", data),
@@ -330,20 +342,14 @@ export default function Checkout() {
                 <CardTitle>Payment Method</CardTitle>
               </CardHeader>
               <CardContent>
-                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <div className="flex items-center space-x-2 p-3 border rounded-md hover-elevate">
-                    <RadioGroupItem value="cod" id="cod" data-testid="radio-cod" />
-                    <Label htmlFor="cod" className="flex-1 cursor-pointer">
-                      Cash on Delivery
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 border rounded-md hover-elevate">
-                    <RadioGroupItem value="phonepe" id="phonepe" data-testid="radio-phonepe" />
-                    <Label htmlFor="phonepe" className="flex-1 cursor-pointer">
-                      PhonePe / UPI / Cards / Net Banking
-                    </Label>
-                  </div>
-                </RadioGroup>
+                <div className="flex items-center space-x-2 p-3 border rounded-md border-primary bg-primary/5">
+                  <RadioGroup value="phonepe">
+                    <RadioGroupItem value="phonepe" id="phonepe" data-testid="radio-phonepe" checked />
+                  </RadioGroup>
+                  <Label htmlFor="phonepe" className="flex-1 cursor-pointer font-medium">
+                    PhonePe / UPI / Cards / Net Banking
+                  </Label>
+                </div>
               </CardContent>
             </Card>
           </div>

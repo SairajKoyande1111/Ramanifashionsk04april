@@ -17,9 +17,6 @@ import {
   Star,
   Heart,
   ShoppingBag,
-  Truck,
-  Shield,
-  BadgeCheck,
   Sparkles,
   Share2,
 } from "lucide-react";
@@ -840,22 +837,7 @@ export default function ProductDetail() {
               </Button>
             </div>
 
-            <Accordion type="single" collapsible className="w-full">
-              <AccordionItem value="description">
-                <AccordionTrigger
-                  className="text-lg font-bold text-[#6B4423] dark:text-[#D4A373] hover:no-underline"
-                  data-testid="button-accordion-description"
-                >
-                  PRODUCT DESCRIPTION
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  <p>
-                    {product.detailedDescription || product.description ||
-                      "Beautiful and elegant saree perfect for any occasion."}
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
+            <Accordion type="single" collapsible defaultValue="details" className="w-full">
               <AccordionItem value="details">
                 <AccordionTrigger
                   className="text-lg font-bold text-[#6B4423] dark:text-[#D4A373] hover:no-underline"
@@ -939,6 +921,21 @@ export default function ProductDetail() {
                 </AccordionContent>
               </AccordionItem>
 
+              <AccordionItem value="description">
+                <AccordionTrigger
+                  className="text-lg font-bold text-[#6B4423] dark:text-[#D4A373] hover:no-underline"
+                  data-testid="button-accordion-description"
+                >
+                  PRODUCT DESCRIPTION
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground">
+                  <p>
+                    {product.detailedDescription || product.description ||
+                      "Beautiful and elegant saree perfect for any occasion."}
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
               {product.specifications && (
                 <AccordionItem value="specifications">
                   <AccordionTrigger
@@ -1004,23 +1001,6 @@ export default function ProductDetail() {
                 </AccordionItem>
               )}
 
-              <AccordionItem value="return">
-                <AccordionTrigger
-                  className="text-lg font-bold text-[#6B4423] dark:text-[#D4A373] hover:no-underline"
-                  data-testid="button-accordion-return"
-                >
-                  RETURN & EXCHANGE
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-2">
-                  <p>Easy 7-day return and exchange policy.</p>
-                  <p>
-                    Items must be unused and in original packaging with all tags
-                    attached.
-                  </p>
-                  <p>Refunds will be processed within 7 business days.</p>
-                </AccordionContent>
-              </AccordionItem>
-
               <AccordionItem value="shipping">
                 <AccordionTrigger
                   className="text-lg font-bold text-[#6B4423] dark:text-[#D4A373] hover:no-underline"
@@ -1029,71 +1009,61 @@ export default function ProductDetail() {
                   SHIPPING & DELIVERY
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div className="flex flex-col items-center text-center p-4 border rounded-md">
-                      <Truck className="h-8 w-8 text-primary mb-2" />
-                      <span className="text-sm font-semibold text-foreground">
-                        Free Delivery
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        On orders above ₹699
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center text-center p-4 border rounded-md">
-                      <BadgeCheck className="h-8 w-8 text-primary mb-2" />
-                      <span className="text-sm font-semibold text-foreground">
-                        Original Product
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Authenticity guaranteed
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center text-center p-4 border rounded-md">
-                      <Shield className="h-8 w-8 text-primary mb-2" />
-                      <span className="text-sm font-semibold text-foreground">
-                        Secure Payment
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        100% secure
-                      </span>
-                    </div>
-                  </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>• Standard delivery takes 5-7 business days</p>
-                    <p>
-                      • Express delivery available in select locations (2-3
-                      business days)
-                    </p>
-                    <p>• Track your order in real-time after shipment</p>
+                    <p>• Orders are dispatched within 1-2 business days.</p>
+                    <p>• Domestic delivery typically takes 3-6 business days after dispatch.</p>
+                    <p>• All orders are shipped via trusted courier partners.</p>
+                    <p>• Tracking details will be shared once your order is dispatched.</p>
+                    <p>• Delivery timelines may occasionally be affected due to unforeseen external factors. In such cases, we will provide complete support to help you track and receive your order smoothly.</p>
                   </div>
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="manufacturer">
+              <AccordionItem value="return">
                 <AccordionTrigger
                   className="text-lg font-bold text-[#6B4423] dark:text-[#D4A373] hover:no-underline"
-                  data-testid="button-accordion-manufacturer"
+                  data-testid="button-accordion-return"
                 >
-                  MANUFACTURED BY
+                  RETURN & REFUND
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
-                  <p>Ramani Fashion</p>
-                  <p>Quality assured traditional and contemporary sarees</p>
+                <AccordionContent className="text-muted-foreground space-y-2 text-sm">
+                  <p>• If you receive a defective or wrong product, we will arrange a return or replacement.</p>
+                  <p>• A clear parcel opening video without pause or cuts is mandatory for any return or exchange request.</p>
+                  <p>• Any issue must be reported within 24 hours of receiving the parcel.</p>
+                  <p>• Once the returned product is received and passes quality check, refund or replacement will be processed.</p>
+                  <p>• If the pincode is in a non-serviceable pickup zone, the customer may need to self-ship the product. In such cases, we will reimburse the return courier charges along with the product refund, after quality check.</p>
+                  <p>• Color change requests are not accepted.</p>
+                  <p>• Minor variations in color, weave, texture, or threadwork are natural in handloom products and are not considered defects.</p>
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="care">
+              <AccordionItem value="cancellation">
                 <AccordionTrigger
                   className="text-lg font-bold text-[#6B4423] dark:text-[#D4A373] hover:no-underline"
-                  data-testid="button-accordion-care"
+                  data-testid="button-accordion-cancellation"
                 >
-                  CUSTOMER CARE
+                  CANCELLATIONS
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground space-y-2">
-                  <p>Contact us for any queries or support.</p>
-                  <p>Email: ramanifashion2024@gmail.com</p>
-                  <p>Phone: +91 93724 94513</p>
-                  <p>Available: Monday to Saturday, 10 AM - 6 PM</p>
+                <AccordionContent className="text-muted-foreground space-y-2 text-sm">
+                  <p>• Orders can be cancelled within 24 hours of placing the order.</p>
+                  <p>• To request cancellation, please contact us at 9372494513.</p>
+                  <p>• Once the order is shipped, it cannot be cancelled.</p>
+                  <p>• If the customer rejects the parcel at the time of delivery, the refund will be processed after deducting applicable to and from shipping charges.</p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="disclaimer">
+                <AccordionTrigger
+                  className="text-lg font-bold text-[#6B4423] dark:text-[#D4A373] hover:no-underline"
+                  data-testid="button-accordion-disclaimer"
+                >
+                  DISCLAIMER
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground space-y-2 text-sm">
+                  <p>• The product images are clicked in natural daylight; however, the actual color may vary slightly due to different screen settings and brightness levels.</p>
+                  <p>• In handloom and handcrafted products, minor variations in weave, texture, or design are natural and are not considered defects.</p>
+                  <p>• Minor irregularities such as thread pulls, slight weaving variations, or yarn differences are inherent to handcrafted fabrics and add to their unique character.</p>
+                  <p>• These natural characteristics are not considered defects.</p>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
