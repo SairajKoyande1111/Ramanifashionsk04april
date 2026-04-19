@@ -213,6 +213,7 @@ const orderSchema = new Schema({
   approved: { type: Boolean, default: false },
   approvedBy: { type: String },
   approvedAt: { type: Date },
+  inventoryDeducted: { type: Boolean, default: false },
   phonePeTransactionId: { type: String },
   phonePeMerchantOrderId: { type: String },
   phonePeOrderId: { type: String },

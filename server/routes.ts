@@ -1492,6 +1492,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Helper: deduct inventory for a list of order items (used for COD on order creation,
+  // and for PhonePe orders only after payment is confirmed).
+  async function deductInventoryForItems(items: any[]) {
+    for (const item of items) {
+      try {
+        const product = await Product.findById(item.productId);
+        if (!product) continue;
+        (product as any).updatedAt = new Date();
+
+        if (item.selectedSize && (product as any).category === 'BLOUSES') {
+          const matchedVariant = item.selectedColor
+            ? (product as any).colorVariants?.find((v: any) => v.color === item.selectedColor)
+            : (product as any).colorVariants?.[0];
+          if (matchedVariant?.blouseSizes?.length) {
+            const sizeEntry = matchedVariant.blouseSizes.find((s: any) => s.size === item.selectedSize);
+            if (sizeEntry) sizeEntry.stockQuantity = Math.max(0, (sizeEntry.stockQuantity || 0) - item.quantity);
+            const variantTotalStock = matchedVariant.blouseSizes.reduce((sum: number, s: any) => sum + (s.stockQuantity || 0), 0);
+            matchedVariant.stockQuantity = variantTotalStock;
+            matchedVariant.inStock = variantTotalStock > 0;
+          } else if ((product as any).blouseSizes?.length > 0) {
+            const sizeEntry = (product as any).blouseSizes.find((s: any) => s.size === item.selectedSize);
+            if (sizeEntry) sizeEntry.stockQuantity = Math.max(0, (sizeEntry.stockQuantity || 0) - item.quantity);
+            const totalSizeStock = (product as any).blouseSizes.reduce((sum: number, s: any) => sum + (s.stockQuantity || 0), 0);
+            (product as any).stockQuantity = totalSizeStock;
+            (product as any).inStock = totalSizeStock > 0;
+          }
+          if ((product as any).colorVariants?.length > 0) {
+            const totalVariantStock = (product as any).colorVariants.reduce((sum: number, v: any) => sum + (v.stockQuantity || 0), 0);
+            (product as any).stockQuantity = totalVariantStock;
+            (product as any).inStock = totalVariantStock > 0;
+          }
+        } else if ((product as any).colorVariants?.length > 0) {
+          const variant = item.selectedColor
+            ? (product as any).colorVariants.find((v: any) => v.color === item.selectedColor)
+            : (product as any).colorVariants[0];
+          const target = variant || (product as any).colorVariants[0];
+          target.stockQuantity = Math.max(0, (target.stockQuantity || 0) - item.quantity);
+          target.inStock = target.stockQuantity > 0;
+          const totalVariantStock = (product as any).colorVariants.reduce((sum: number, v: any) => sum + (v.stockQuantity || 0), 0);
+          (product as any).stockQuantity = totalVariantStock;
+          (product as any).inStock = totalVariantStock > 0;
+        } else {
+          const newQty = Math.max(0, ((product as any).stockQuantity || 0) - item.quantity);
+          (product as any).stockQuantity = newQty;
+          (product as any).inStock = newQty > 0;
+        }
+
+        product.markModified('colorVariants');
+        product.markModified('blouseSizes');
+        await product.save();
+      } catch (invErr: any) {
+        console.error(`[INVENTORY] Failed to deduct stock for product ${item.productId}:`, invErr.message);
+      }
+    }
+  }
+
   app.post("/api/orders", authenticateToken, async (req, res) => {
     try {
       const { items } = req.body;
@@ -1551,89 +1607,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await order.save();
 
-      // Deduct inventory immediately when order is placed
-      if (Array.isArray(items) && items.length > 0) {
-        for (const item of items) {
-          try {
-            const product = await Product.findById(item.productId);
-            if (product) {
-              (product as any).updatedAt = new Date();
-
-              // Deduct from blouse size stock if a size was selected
-              if (item.selectedSize && (product as any).category === 'BLOUSES') {
-                const matchedVariant = item.selectedColor
-                  ? (product as any).colorVariants?.find((v: any) => v.color === item.selectedColor)
-                  : (product as any).colorVariants?.[0];
-                if (matchedVariant?.blouseSizes?.length) {
-                  const sizeEntry = matchedVariant.blouseSizes.find((s: any) => s.size === item.selectedSize);
-                  if (sizeEntry) {
-                    sizeEntry.stockQuantity = Math.max(0, (sizeEntry.stockQuantity || 0) - item.quantity);
-                  }
-                  const variantTotalStock = matchedVariant.blouseSizes.reduce(
-                    (sum: number, s: any) => sum + (s.stockQuantity || 0), 0
-                  );
-                  matchedVariant.stockQuantity = variantTotalStock;
-                  matchedVariant.inStock = variantTotalStock > 0;
-                } else if ((product as any).blouseSizes?.length > 0) {
-                  // fallback: global blouseSizes (legacy)
-                  const sizeEntry = (product as any).blouseSizes.find((s: any) => s.size === item.selectedSize);
-                  if (sizeEntry) {
-                    sizeEntry.stockQuantity = Math.max(0, (sizeEntry.stockQuantity || 0) - item.quantity);
-                  }
-                  const totalSizeStock = (product as any).blouseSizes.reduce(
-                    (sum: number, s: any) => sum + (s.stockQuantity || 0), 0
-                  );
-                  (product as any).stockQuantity = totalSizeStock;
-                  (product as any).inStock = totalSizeStock > 0;
-                }
-                // Recalculate product-level stock from all color variants
-                if ((product as any).colorVariants?.length > 0) {
-                  const totalVariantStock = (product as any).colorVariants.reduce(
-                    (sum: number, v: any) => sum + (v.stockQuantity || 0), 0
-                  );
-                  (product as any).stockQuantity = totalVariantStock;
-                  (product as any).inStock = totalVariantStock > 0;
-                }
-              } else if ((product as any).colorVariants?.length > 0) {
-                // Deduct from the specific color variant
-                if (item.selectedColor) {
-                  const variant = (product as any).colorVariants.find(
-                    (v: any) => v.color === item.selectedColor
-                  );
-                  if (variant) {
-                    variant.stockQuantity = Math.max(0, (variant.stockQuantity || 0) - item.quantity);
-                    variant.inStock = variant.stockQuantity > 0;
-                  } else {
-                    const firstVariant = (product as any).colorVariants[0];
-                    firstVariant.stockQuantity = Math.max(0, (firstVariant.stockQuantity || 0) - item.quantity);
-                    firstVariant.inStock = firstVariant.stockQuantity > 0;
-                  }
-                } else {
-                  const firstVariant = (product as any).colorVariants[0];
-                  firstVariant.stockQuantity = Math.max(0, (firstVariant.stockQuantity || 0) - item.quantity);
-                  firstVariant.inStock = firstVariant.stockQuantity > 0;
-                }
-                // Recalculate product-level stock as sum of all variant stocks
-                const totalVariantStock = (product as any).colorVariants.reduce(
-                  (sum: number, v: any) => sum + (v.stockQuantity || 0), 0
-                );
-                (product as any).stockQuantity = totalVariantStock;
-                (product as any).inStock = totalVariantStock > 0;
-              } else {
-                // No color variants — deduct from product-level stock
-                const newQty = Math.max(0, ((product as any).stockQuantity || 0) - item.quantity);
-                (product as any).stockQuantity = newQty;
-                (product as any).inStock = newQty > 0;
-              }
-
-              product.markModified('colorVariants');
-              product.markModified('blouseSizes');
-              await product.save();
-            }
-          } catch (invErr: any) {
-            console.error(`Failed to reduce inventory for product ${item.productId}:`, invErr.message);
-          }
-        }
+      // For COD orders: deduct inventory immediately.
+      // For PhonePe orders: inventory is deducted only after payment is confirmed (see payment callback/webhook).
+      if (req.body.paymentMethod !== 'phonepe' && Array.isArray(items) && items.length > 0) {
+        await deductInventoryForItems(items);
+        await Order.findByIdAndUpdate(order._id, { inventoryDeducted: true });
       }
 
       // Update customer profile with shipping address
@@ -1780,6 +1758,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           console.log('[STATUS CHECK] Order updated successfully:', updatedOrder?.paymentStatus);
 
+          // Deduct inventory now that payment is confirmed (only once)
+          if (paymentStatus === 'paid' && !order.inventoryDeducted && order.items?.length > 0) {
+            console.log('[STATUS CHECK] Deducting inventory for confirmed PhonePe payment');
+            await deductInventoryForItems(order.items as any[]);
+            await Order.findByIdAndUpdate(order._id, { inventoryDeducted: true });
+          }
+
           return res.json({
             success: true,
             state: statusResponse.state,
@@ -1885,6 +1870,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }, { new: true });
               
               console.log('[PAYMENT CALLBACK] Order updated - new paymentStatus:', updatedOrder?.paymentStatus);
+
+              // Deduct inventory now that payment is confirmed (only once)
+              if (dbPaymentStatus === 'paid' && !order.inventoryDeducted && order.items?.length > 0) {
+                console.log('[PAYMENT CALLBACK] Deducting inventory for confirmed PhonePe payment');
+                await deductInventoryForItems(order.items as any[]);
+                await Order.findByIdAndUpdate(order._id, { inventoryDeducted: true });
+              }
             }
           } catch (apiError) {
             console.error('[PAYMENT CALLBACK] Error checking PhonePe API:', apiError);
@@ -1963,6 +1955,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }, { new: true });
           
           console.log('[WEBHOOK] Order updated successfully - new paymentStatus:', updatedOrder?.paymentStatus);
+
+          // Deduct inventory now that payment is confirmed (only once)
+          if (paymentStatus === 'paid' && !order.inventoryDeducted && order.items?.length > 0) {
+            console.log('[WEBHOOK] Deducting inventory for confirmed PhonePe payment');
+            await deductInventoryForItems(order.items as any[]);
+            await Order.findByIdAndUpdate(order._id, { inventoryDeducted: true });
+          }
 
           // Send SMS notification for payment outcome
           try {
