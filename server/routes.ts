@@ -120,6 +120,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const category = await Category.findById(req.params.id);
       if (category) {
         deleteLocalImages(extractCategoryImageUrls(category));
+        // Collect all subcategory names under this parent category
+        const subNames: string[] = Array.isArray(category.subCategories)
+          ? (category.subCategories as any[]).map((s: any) => s.name).filter(Boolean)
+          : [];
+        // Clear subcategory field on products assigned to any of those subcategories
+        if (subNames.length > 0) {
+          await Product.updateMany(
+            { subcategory: { $in: subNames } },
+            { $unset: { subcategory: "" } }
+          );
+        }
+        // Clear category field on products directly assigned to this parent category name
+        await Product.updateMany(
+          { category: category.name },
+          { $unset: { subcategory: "" }, $set: { category: "" } }
+        );
       }
       await Category.findByIdAndDelete(req.params.id);
       res.json({ success: true });
@@ -229,12 +245,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const category = await Category.findById(req.params.id);
       if (!category) return res.status(404).json({ error: "Category not found" });
       const subs: any[] = Array.isArray(category.subCategories) ? [...category.subCategories] : [];
+      const deletedSub = subs.find((s: any) => s.slug === req.params.subSlug);
+      if (!deletedSub) return res.status(404).json({ error: "Subcategory not found" });
       const filtered = subs.filter((s: any) => s.slug !== req.params.subSlug);
-      if (filtered.length === subs.length) return res.status(404).json({ error: "Subcategory not found" });
       category.subCategories = filtered;
       category.markModified('subCategories');
       category.updatedAt = new Date();
       await category.save();
+      // Clear subcategory field from all products assigned to the deleted subcategory
+      if (deletedSub.name) {
+        await Product.updateMany(
+          { subcategory: deletedSub.name },
+          { $unset: { subcategory: "" } }
+        );
+      }
       res.json({ success: true, category });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
