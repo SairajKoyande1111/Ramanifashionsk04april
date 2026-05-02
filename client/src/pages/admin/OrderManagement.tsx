@@ -450,10 +450,10 @@ export default function OrderManagement() {
                         <TableCell className="py-3">
                           <div>
                             <p className="font-medium text-sm leading-tight" data-testid={`text-customer-name-${order._id}`}>
-                              {order.userId?.name || 'Unknown'}
+                              {order.userId?.name || order.shippingAddress?.fullName || 'Unknown'}
                             </p>
                             <p className="text-xs text-muted-foreground leading-tight" data-testid={`text-customer-email-${order._id}`}>
-                              {order.userId?.email || ''}
+                              {order.userId?.email || order.shippingAddress?.phone || ''}
                             </p>
                           </div>
                         </TableCell>
@@ -565,9 +565,9 @@ export default function OrderManagement() {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Customer</p>
                     <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
-                      <p className="font-semibold">{selectedOrder.userId?.name || 'Unknown'}</p>
+                      <p className="font-semibold">{selectedOrder.userId?.name || selectedOrder.shippingAddress?.fullName || 'Unknown'}</p>
                       <p className="text-muted-foreground">{selectedOrder.userId?.email || 'N/A'}</p>
-                      <p className="text-muted-foreground">{selectedOrder.userId?.phone || 'N/A'}</p>
+                      <p className="text-muted-foreground">{selectedOrder.userId?.phone || selectedOrder.shippingAddress?.phone || 'N/A'}</p>
                     </div>
                   </div>
                   <div>
