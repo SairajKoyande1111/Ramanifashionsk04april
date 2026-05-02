@@ -288,28 +288,15 @@ export default function Home() {
           <HeroCarousel />
         </motion.div>
 
-        <motion.section
-          className="py-4 md:py-2 bg-white"
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-        >
+        <section className="py-4 md:py-2 bg-white">
           <div className="max-w-7xl mx-auto">
             <div className="overflow-x-auto scrollbar-hide">
-              <motion.div
-                className="flex gap-6 md:gap-8 lg:gap-10 pb-4 px-6 md:px-10"
-                variants={staggerContainer}
-                initial="hidden"
-                animate="visible"
-              >
+              <div className="flex gap-6 md:gap-8 lg:gap-10 pb-4 px-6 md:px-10">
                 {newCategories
                   .filter((cat) => cat.name !== "Sale")
-                  .map((category, index) => (
-                    <motion.div
+                  .map((category) => (
+                    <div
                       key={category.name}
-                      variants={fadeInUp}
-                      transition={{ duration: 0.5 }}
                       className="flex flex-col items-center cursor-pointer group flex-shrink-0"
                       onClick={() => {
                         if (category.name === "Sale") {
@@ -343,12 +330,12 @@ export default function Home() {
                       >
                         {category.name}
                       </h3>
-                    </motion.div>
+                    </div>
                   ))}
-              </motion.div>
+              </div>
             </div>
           </div>
-        </motion.section>
+        </section>
 
         {/* ── Shop by Category cards ── */}
         <motion.section
