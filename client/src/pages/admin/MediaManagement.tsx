@@ -6,9 +6,10 @@ import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { AlertCircle, Upload, Check, Trash2, Monitor, Smartphone, Image, Link as LinkIcon, X } from "lucide-react";
+import { AlertCircle, Upload, Check, Trash2, Monitor, Smartphone, Image, Link as LinkIcon, X, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -417,6 +418,38 @@ export default function MediaManagement() {
     queryKey: ["/api/categories"],
   });
 
+  const { data: siteSettings } = useQuery<any>({
+    queryKey: ["/api/settings"],
+    staleTime: 0,
+  });
+
+  const showRamaniBanner = siteSettings?.showRamaniBanner !== false;
+  const showPromotionalVideo = siteSettings?.showPromotionalVideo !== false;
+
+  const visibilityMutation = useMutation({
+    mutationFn: async (body: { showRamaniBanner?: boolean; showPromotionalVideo?: boolean }) => {
+      const res = await fetch("/api/admin/settings/homepage-visibility", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Update failed");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const categoryOptions = buildCategoryOptions(categories);
 
   if (!adminToken) {
@@ -529,12 +562,42 @@ export default function MediaManagement() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Ramani Fashion Banner</CardTitle>
-                  <CardDescription>
-                    Central branding banner section. Recommended: 1200×600 or similar aspect ratio
-                  </CardDescription>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle>Ramani Fashion Banner</CardTitle>
+                      <CardDescription className="mt-1">
+                        Central branding banner section. Recommended: 1200×600 or similar aspect ratio
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 pt-1">
+                      {showRamaniBanner ? (
+                        <Eye className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <Switch
+                        checked={showRamaniBanner}
+                        onCheckedChange={(checked) =>
+                          visibilityMutation.mutate({ showRamaniBanner: checked })
+                        }
+                        disabled={visibilityMutation.isPending}
+                        data-testid="switch-show-ramani-banner"
+                      />
+                      <span className="text-sm font-medium whitespace-nowrap">
+                        {showRamaniBanner ? "Visible" : "Hidden"}
+                      </span>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {!showRamaniBanner && (
+                    <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <EyeOff className="h-4 w-4 text-amber-600 shrink-0" />
+                      <p className="text-sm text-amber-700 dark:text-amber-400">
+                        This section is currently hidden from the homepage. Toggle the switch to make it visible.
+                      </p>
+                    </div>
+                  )}
                   {previewBanner && (
                     <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-700 rounded">
                       <img src={previewBanner} alt="Banner preview" className="max-h-64 mx-auto" />
@@ -561,12 +624,42 @@ export default function MediaManagement() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Promotional Video</CardTitle>
-                  <CardDescription>
-                    Featured video on the homepage. Supports MP4, WebM, and other video formats
-                  </CardDescription>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle>Promotional Video</CardTitle>
+                      <CardDescription className="mt-1">
+                        Featured video on the homepage. Supports MP4, WebM, and other video formats
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 pt-1">
+                      {showPromotionalVideo ? (
+                        <Eye className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <Switch
+                        checked={showPromotionalVideo}
+                        onCheckedChange={(checked) =>
+                          visibilityMutation.mutate({ showPromotionalVideo: checked })
+                        }
+                        disabled={visibilityMutation.isPending}
+                        data-testid="switch-show-promotional-video"
+                      />
+                      <span className="text-sm font-medium whitespace-nowrap">
+                        {showPromotionalVideo ? "Visible" : "Hidden"}
+                      </span>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {!showPromotionalVideo && (
+                    <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <EyeOff className="h-4 w-4 text-amber-600 shrink-0" />
+                      <p className="text-sm text-amber-700 dark:text-amber-400">
+                        This section is currently hidden from the homepage. Toggle the switch to make it visible.
+                      </p>
+                    </div>
+                  )}
                   {previewVideo && (
                     <div className="mb-4 p-2 bg-gray-100 dark:bg-gray-700 rounded">
                       <video src={previewVideo} className="max-h-64 mx-auto" controls />

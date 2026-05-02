@@ -454,6 +454,8 @@ const settingsSchema = new Schema({
   shippingCharges: { type: Number, default: 0 },
   freeShippingThreshold: { type: Number, default: 999 },
   homeCircles: { type: [Schema.Types.Mixed], default: [] },
+  showRamaniBanner: { type: Boolean, default: true },
+  showPromotionalVideo: { type: Boolean, default: true },
   updatedAt: { type: Date, default: Date.now },
   updatedBy: { type: String },
 });

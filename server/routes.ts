@@ -4355,6 +4355,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/admin/settings/homepage-visibility", authenticateAdmin, async (req, res) => {
+    try {
+      const { showRamaniBanner, showPromotionalVideo } = req.body;
+      let settings = await Settings.findOne();
+      if (!settings) {
+        settings = await Settings.create({ shippingCharges: 0, freeShippingThreshold: 999 });
+      }
+      if (showRamaniBanner !== undefined) settings.showRamaniBanner = showRamaniBanner;
+      if (showPromotionalVideo !== undefined) settings.showPromotionalVideo = showPromotionalVideo;
+      settings.updatedAt = new Date();
+      await settings.save();
+      res.json({ showRamaniBanner: settings.showRamaniBanner, showPromotionalVideo: settings.showPromotionalVideo });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Media Upload Route - for hero banner, ramani banner, and video
   app.post("/api/admin/upload-media", authenticateAdmin, (req, res) => {
     mediaUpload.fields([

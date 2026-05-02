@@ -73,14 +73,24 @@ export default function Home() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const { data: siteSettings } = useQuery<any>({
+    queryKey: ["/api/settings"],
+    staleTime: 30000,
+  });
+
+  const showRamaniBanner = siteSettings?.showRamaniBanner !== false;
+  const showPromotionalVideo = siteSettings?.showPromotionalVideo !== false;
+
   useEffect(() => {
+    if (!showRamaniBanner) return;
     const cacheBust = Date.now();
     const img = new Image();
     img.onload = () => setRamaniBanner(`/media/ramani-banner.png?t=${cacheBust}`);
     img.src = `/media/ramani-banner.png?t=${cacheBust}`;
-  }, []);
+  }, [showRamaniBanner]);
 
   useEffect(() => {
+    if (!showPromotionalVideo) return;
     const cacheBust = Date.now();
     fetch(`/media/promotional-video.mp4?t=${cacheBust}`, { method: "HEAD" })
       .then((res) => {
@@ -90,7 +100,7 @@ export default function Home() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [showPromotionalVideo]);
 
   const { data: newArrivalsData, isLoading: newArrivalsLoading } = useQuery({
     queryKey: ["/api/products?isNew=true&limit=6&inStock=false"],
@@ -555,14 +565,14 @@ export default function Home() {
           </div>
         </motion.section>
 
-        <motion.section
-          className="max-w-7xl mx-auto px-4 lg:px-3 py-8"
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-        >
-          {ramaniBanner && (
+        {showRamaniBanner && ramaniBanner && (
+          <motion.section
+            className="max-w-7xl mx-auto px-4 lg:px-3 py-8"
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+          >
             <div className="w-full overflow-hidden rounded-lg">
               <img
                 src={ramaniBanner}
@@ -570,8 +580,8 @@ export default function Home() {
                 className="w-full h-auto object-cover"
               />
             </div>
-          )}
-        </motion.section>
+          </motion.section>
+        )}
 
         <motion.section
           className="py-8 md:py-12"
@@ -712,7 +722,7 @@ export default function Home() {
           </div>
         </motion.section>
 
-        {videoUrl && (
+        {showPromotionalVideo && videoUrl && (
           <motion.section
             className="max-w-7xl mx-auto px-4 lg:px-3 py-8"
             initial={{ opacity: 0, scale: 0.9 }}
