@@ -3125,8 +3125,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
 
+      // Compute summary stats directly from orders (not per-customer rollup)
+      // so unlinked/guest orders are included and the figure matches the dashboard
+      const paidOrderStatuses = ['approved', 'processing', 'shipped', 'delivered'];
+      const [revenueAgg, totalOrdersCount] = await Promise.all([
+        Order.aggregate([
+          { $match: { orderStatus: { $in: paidOrderStatuses } } },
+          { $group: { _id: null, total: { $sum: '$total' } } }
+        ]),
+        Order.countDocuments({})
+      ]);
+      const summaryRevenue = revenueAgg[0]?.total || 0;
+
       res.json({
         customers: customersWithDetails,
+        summary: {
+          totalRevenue: summaryRevenue,
+          totalOrders: totalOrdersCount
+        },
         pagination: {
           total,
           page: pageNum,

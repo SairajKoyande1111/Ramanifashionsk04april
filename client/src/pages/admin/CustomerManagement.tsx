@@ -121,6 +121,7 @@ export default function CustomerManagement() {
 
   const { data: customersData, isLoading, error } = useQuery<{
     customers: Customer[];
+    summary: { totalRevenue: number; totalOrders: number };
     pagination: { total: number; page: number; limit: number; totalPages: number };
   }>({
     queryKey: ["/api/admin/customers", searchQuery, sortBy, sortOrder, page, limit, paidUsersOnly, filterCity, filterState, lastActivityDays],
@@ -164,6 +165,7 @@ export default function CustomerManagement() {
 
   const customers = customersData?.customers || [];
   const pagination = customersData?.pagination;
+  const summary = customersData?.summary;
   const customerOrders = ordersData?.orders || [];
   const ordersPagination = ordersData?.pagination;
 
@@ -253,7 +255,7 @@ export default function CustomerManagement() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-total-orders">
-                {customers.reduce((sum, c) => sum + c.stats.totalOrders, 0)}
+                {summary?.totalOrders ?? customers.reduce((sum, c) => sum + c.stats.totalOrders, 0)}
               </div>
             </CardContent>
           </Card>
@@ -264,7 +266,7 @@ export default function CustomerManagement() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-total-revenue">
-                {formatCurrency(customers.reduce((sum, c) => sum + c.stats.totalSpent, 0))}
+                {formatCurrency(summary?.totalRevenue ?? customers.reduce((sum, c) => sum + c.stats.totalSpent, 0))}
               </div>
             </CardContent>
           </Card>
