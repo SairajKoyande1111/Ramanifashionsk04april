@@ -216,18 +216,25 @@ export default function ProductDetail() {
     queryFn: async () => {
       if (!product?.category) return [];
       const response = await fetch(
-        `/api/products?category=${encodeURIComponent(product.category)}&limit=8`,
+        `/api/products?category=${encodeURIComponent(product.category)}&limit=50`,
       );
       if (!response.ok) return [];
       const data = await response.json();
-      return (
-        data.products
-          ?.filter((p: any) => {
-            const productBaseId = p.baseProductId || p._id;
-            return productBaseId !== baseProductId;
-          })
-          .slice(0, 8) || []
-      );
+      const seenBaseIds = new Set<string>();
+      const seenSubcategories = new Set<string>();
+      const result: any[] = [];
+      for (const p of data.products || []) {
+        const productBaseId = p.baseProductId || p._id;
+        if (productBaseId === baseProductId) continue;
+        if (seenBaseIds.has(productBaseId)) continue;
+        seenBaseIds.add(productBaseId);
+        const sub = p.subcategory || "__none__";
+        if (seenSubcategories.has(sub)) continue;
+        seenSubcategories.add(sub);
+        result.push(p);
+        if (result.length >= 8) break;
+      }
+      return result;
     },
     enabled: !!product?.category,
   });
