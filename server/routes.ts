@@ -2659,9 +2659,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalProducts = await Product.countDocuments();
       const totalUsers = await User.countDocuments();
       const totalOrders = await Order.countDocuments();
-      
+
+      // Only count revenue from confirmed/paid orders (exclude pending & cancelled)
+      const PAID_STATUSES = ['approved', 'processing', 'shipped', 'delivered'];
+      const paidOrderFilter = { orderStatus: { $in: PAID_STATUSES } };
+
       const orders = await Order.find().lean();
-      const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+      const paidOrders = orders.filter(o => PAID_STATUSES.includes(o.orderStatus));
+      const totalRevenue = paidOrders.reduce((sum, order) => sum + (order.total || 0), 0);
       
       const lowStockProducts = await Product.countDocuments({ stockQuantity: { $lt: 10 } });
       const outOfStockProducts = await Product.countDocuments({ inStock: false });
@@ -2677,13 +2682,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(5)
         .lean();
 
-      // Monthly sales data for the last 6 months
+      // Monthly sales data for the last 6 months (paid orders only)
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
       
       const monthlyOrders = await Order.aggregate([
         {
-          $match: { createdAt: { $gte: sixMonthsAgo } }
+          $match: { createdAt: { $gte: sixMonthsAgo }, ...paidOrderFilter }
         },
         {
           $group: {
@@ -2730,7 +2735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const weeklyOrders = await Order.aggregate([
         {
-          $match: { createdAt: { $gte: fourWeeksAgo } }
+          $match: { createdAt: { $gte: fourWeeksAgo }, ...paidOrderFilter }
         },
         {
           $group: {
@@ -2874,14 +2879,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? Math.round(((currentMonthCustomers - lastMonthCustomers) / lastMonthCustomers) * 100) 
         : currentMonthCustomers > 0 ? 100 : 0;
 
-      // Average order value growth
-      const currentMonthRevenue = orders.filter(o => {
+      // Average order value growth (paid orders only)
+      const currentMonthRevenue = paidOrders.filter(o => {
         const orderDate = new Date(o.createdAt);
         const now = new Date();
         return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
       }).reduce((sum, o) => sum + (o.total || 0), 0);
 
-      const lastMonthRevenue = orders.filter(o => {
+      const lastMonthRevenue = paidOrders.filter(o => {
         const orderDate = new Date(o.createdAt);
         const now = new Date();
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
