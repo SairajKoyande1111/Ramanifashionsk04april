@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import Footer from "@/components/Footer";
-import { RotateCcw, Package, CreditCard } from "lucide-react";
+import { Truck, RotateCcw, XCircle } from "lucide-react";
 
 export default function Returns() {
   useEffect(() => {
@@ -17,54 +17,51 @@ export default function Returns() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          <Card className="bg-white p-6 text-center">
-            <Package className="h-12 w-12 text-pink-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              7 Working Days Return
-            </h3>
-            <p className="text-gray-700">
-              Returns accepted within 7 working days
-            </p>
-          </Card>
-          <Card className="bg-white p-6 text-center">
-            <CreditCard className="h-12 w-12 text-pink-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              7 Working Days Refund
-            </h3>
-            <p className="text-gray-700">
-              Refund processed within 7 working days
-            </p>
-          </Card>
-        </div>
+      <main className="max-w-4xl mx-auto px-4 py-12 space-y-8">
 
-        <Card className="bg-white p-8 space-y-6">
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Return Policy
-            </h2>
-            <ul className="list-disc list-inside text-gray-700 space-y-2">
-              <li>Returns are accepted within 7 working days for items.</li>
-              <li>Items must be unused and returned in original packaging.</li>
-              <li>Proof of damage (photo/video) may be required.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Refund Policy
-            </h2>
-            <ul className="list-disc list-inside text-gray-700 space-y-2">
-              <li>
-                Approved Refunds will be credited to the original mode of
-                payment within 7 working days after the returned item is
-                received and inspected.
-              </li>
-              <li>Shipping charges are non-refundable.</li>
-            </ul>
-          </section>
+        <Card className="bg-white p-8">
+          <div className="flex items-center gap-3 mb-5">
+            <Truck className="h-7 w-7 text-pink-500 shrink-0" />
+            <h2 className="text-2xl font-bold text-gray-900">Shipping</h2>
+          </div>
+          <ul className="text-gray-700 space-y-3">
+            <li>Orders are dispatched within 1–2 business days.</li>
+            <li>Domestic delivery typically takes 3–6 business days after dispatch.</li>
+            <li>All orders are shipped via trusted courier partners.</li>
+            <li>Tracking details will be shared once your order is dispatched.</li>
+            <li>Delivery timelines may occasionally be affected due to unforeseen external factors. In such cases, we will provide complete support to help you track and receive your order smoothly.</li>
+          </ul>
         </Card>
+
+        <Card className="bg-white p-8">
+          <div className="flex items-center gap-3 mb-5">
+            <RotateCcw className="h-7 w-7 text-pink-500 shrink-0" />
+            <h2 className="text-2xl font-bold text-gray-900">Return & Refund</h2>
+          </div>
+          <ul className="text-gray-700 space-y-3">
+            <li>If you receive a defective or wrong product, we will arrange a return or replacement.</li>
+            <li>A clear parcel opening video without pause or cuts is mandatory for any return or exchange request.</li>
+            <li>Any issue must be reported within 24 hours of receiving the parcel.</li>
+            <li>Once the returned product is received and passes quality check, refund or replacement will be processed.</li>
+            <li>If the pincode is in a non-serviceable pickup zone, the customer may need to self-ship the product. In such cases, we will reimburse the return courier charges along with the product refund, after quality check.</li>
+            <li>Color change requests are not accepted.</li>
+            <li>Minor variations in color, weave, texture, or threadwork are natural in handloom products and are not considered defects.</li>
+          </ul>
+        </Card>
+
+        <Card className="bg-white p-8">
+          <div className="flex items-center gap-3 mb-5">
+            <XCircle className="h-7 w-7 text-pink-500 shrink-0" />
+            <h2 className="text-2xl font-bold text-gray-900">Cancellations</h2>
+          </div>
+          <ul className="text-gray-700 space-y-3">
+            <li>Orders can be cancelled within 24 hours of placing the order.</li>
+            <li>To request cancellation, please contact us at 9372494513.</li>
+            <li>Once the order is shipped, it cannot be cancelled.</li>
+            <li>If the customer rejects the parcel at the time of delivery, the refund will be processed after deducting applicable to and from shipping charges.</li>
+          </ul>
+        </Card>
+
       </main>
 
       <Footer />
