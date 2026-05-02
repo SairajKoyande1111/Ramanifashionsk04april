@@ -952,16 +952,6 @@ export default function ProductDetail() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {product.specifications.fabricComposition && (
-                        <div>
-                          <span className="font-semibold text-foreground">
-                            Fabric Composition:{" "}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {product.specifications.fabricComposition}
-                          </span>
-                        </div>
-                      )}
                       {product.specifications.dimensions && (
                         <div>
                           <span className="font-semibold text-foreground">

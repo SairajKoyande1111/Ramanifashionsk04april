@@ -142,7 +142,6 @@ export default function ProductManagement() {
     isTrending: false,
     isBestseller: false,
     onSale: false,
-    fabricComposition: "",
     dimensions: "",
     weight: "",
     careInstructions: "",
@@ -288,7 +287,6 @@ export default function ProductManagement() {
       isTrending: false,
       isBestseller: false,
       onSale: false,
-      fabricComposition: "",
       dimensions: "",
       weight: "",
       careInstructions: "",
@@ -393,7 +391,7 @@ export default function ProductManagement() {
             countryOfOrigin: productForm.countryOfOrigin || undefined,
           }
         : {
-            fabricComposition: productForm.fabricComposition || undefined,
+
             dimensions: productForm.dimensions || undefined,
             weight: productForm.weight || undefined,
             careInstructions: productForm.careInstructions || undefined,
@@ -794,17 +792,6 @@ export default function ProductManagement() {
                 <div className="space-y-4 border-t pt-4">
                   <h3 className="font-semibold text-sm">Product Specifications</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fabricComposition" data-testid="label-fabric-composition">Fabric Composition</Label>
-                      <Input
-                        id="fabricComposition"
-                        value={productForm.fabricComposition}
-                        onChange={(e) => setProductForm({...productForm, fabricComposition: e.target.value})}
-                        placeholder="e.g., 100% Cotton Silk"
-                        data-testid="input-fabric-composition"
-                      />
-                    </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="dimensions" data-testid="label-dimensions">Dimensions</Label>
                       <Input

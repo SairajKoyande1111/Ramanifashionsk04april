@@ -124,7 +124,6 @@ export default function InventoryManagement() {
     isTrending: false,
     isBestseller: false,
     onSale: false,
-    fabricComposition: "",
     dimensions: "",
     weight: "",
     careInstructions: "",
@@ -494,7 +493,6 @@ export default function InventoryManagement() {
         isTrending: fullProduct.isTrending ?? false,
         isBestseller: fullProduct.isBestseller ?? false,
         onSale: fullProduct.onSale || false,
-        fabricComposition: fullProduct.specifications?.fabricComposition || "",
         dimensions: fullProduct.specifications?.dimensions || "",
         weight: fullProduct.specifications?.weight || "",
         careInstructions: fullProduct.specifications?.careInstructions || "",
@@ -568,7 +566,7 @@ export default function InventoryManagement() {
             countryOfOrigin: productForm.countryOfOrigin || undefined,
           }
         : {
-            fabricComposition: productForm.fabricComposition || undefined,
+
             dimensions: productForm.dimensions || undefined,
             weight: productForm.weight || undefined,
             careInstructions: productForm.careInstructions || undefined,
@@ -1532,16 +1530,6 @@ export default function InventoryManagement() {
               <div className="space-y-4 border-t pt-4">
                 <h3 className="font-semibold text-sm">Product Specifications</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-fabricComposition">Fabric Composition</Label>
-                    <Input
-                      id="edit-fabricComposition"
-                      value={productForm.fabricComposition}
-                      onChange={(e) => setProductForm({...productForm, fabricComposition: e.target.value})}
-                      placeholder="e.g., 100% Cotton Silk"
-                    />
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="edit-dimensions">Dimensions</Label>
                     <Input
