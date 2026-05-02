@@ -124,6 +124,7 @@ export default function InventoryManagement() {
     isTrending: false,
     isBestseller: false,
     onSale: false,
+    displayOrder: "",
     fabricComposition: "",
     dimensions: "",
     weight: "",
@@ -494,6 +495,7 @@ export default function InventoryManagement() {
         isTrending: fullProduct.isTrending ?? false,
         isBestseller: fullProduct.isBestseller ?? false,
         onSale: fullProduct.onSale || false,
+        displayOrder: fullProduct.displayOrder !== undefined && fullProduct.displayOrder !== 9999 ? fullProduct.displayOrder.toString() : "",
         fabricComposition: fullProduct.specifications?.fabricComposition || "",
         dimensions: fullProduct.specifications?.dimensions || "",
         weight: fullProduct.specifications?.weight || "",
@@ -557,6 +559,7 @@ export default function InventoryManagement() {
       isTrending: productForm.isTrending,
       isBestseller: productForm.isBestseller,
       onSale: productForm.onSale,
+      displayOrder: (productForm as any).displayOrder !== "" ? parseInt((productForm as any).displayOrder) : 9999,
       images: uploadedImages,
       specifications: isJewellery
         ? {
@@ -1455,6 +1458,22 @@ export default function InventoryManagement() {
                 />
                 <Label htmlFor="edit-onSale" data-testid="label-edit-on-sale">On Sale</Label>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-displayOrder" data-testid="label-edit-display-order">
+                Display Priority <span className="text-xs text-muted-foreground font-normal">(1 = show first, leave blank for default)</span>
+              </Label>
+              <Input
+                id="edit-displayOrder"
+                type="number"
+                min="1"
+                placeholder="e.g. 1, 2, 3..."
+                value={(productForm as any).displayOrder}
+                onChange={(e) => setProductForm({...productForm, displayOrder: e.target.value} as any)}
+                className="w-48"
+                data-testid="input-edit-display-order"
+              />
             </div>
 
             {productForm.category === "JEWELLERY" ? (

@@ -66,6 +66,7 @@ const productSchema = new Schema({
   isBestseller: { type: Boolean, default: false },
   isTrending: { type: Boolean, default: false },
   onSale: { type: Boolean, default: false },
+  displayOrder: { type: Number, default: 9999 },
   rating: { type: Number, default: 0 },
   reviewCount: { type: Number, default: 0 },
   specifications: {
