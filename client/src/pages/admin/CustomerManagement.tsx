@@ -393,7 +393,12 @@ export default function CustomerManagement() {
                             {customer.phoneVerified && <Badge variant="secondary" className="ml-2 text-xs">Verified</Badge>}
                           </TableCell>
                           <TableCell data-testid={`text-name-${customer._id}`}>
-                            {customer.name || <span className="text-muted-foreground italic">Not provided</span>}
+                            {customer.name
+                              ? customer.name
+                              : customer.shippingName
+                                ? <span>{customer.shippingName} <span className="text-xs text-muted-foreground">(from order)</span></span>
+                                : <span className="text-muted-foreground italic">Not provided</span>
+                            }
                           </TableCell>
                           <TableCell data-testid={`text-email-${customer._id}`}>
                             {customer.email || <span className="text-muted-foreground italic">Not provided</span>}

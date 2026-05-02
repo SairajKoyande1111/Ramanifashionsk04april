@@ -3086,10 +3086,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? wishlist.items.map((item: any) => item.productId).filter(Boolean)
             : [];
           
+          // Get name from most recent order's shipping address if profile name not set
+          const shippingName = orders.length > 0 ? (orders[0].shippingAddress?.fullName || '') : '';
+
           return {
             _id: customer._id,
             phone: customer.phone,
             name: customer.name || '',
+            shippingName,
             email: customer.email || '',
             dob: customer.dob,
             address: displayAddress,
