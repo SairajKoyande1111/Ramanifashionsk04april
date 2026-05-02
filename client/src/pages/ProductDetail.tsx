@@ -1116,7 +1116,7 @@ export default function ProductDetail() {
                     reviewCount={similarProduct.reviewCount}
                     isNew={similarProduct.isNew}
                     isBestseller={similarProduct.isBestseller}
-                    shortDescription={similarProduct.shortDescription}
+                    shortDescription={similarProduct.subDescription}
                     description={similarProduct.description}
                   />
                 </motion.div>
