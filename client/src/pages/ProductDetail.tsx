@@ -111,19 +111,26 @@ export default function ProductDetail() {
     isSwiping.current = false;
   };
 
+  const rafRef = useRef<number | null>(null);
+
   const handleImageMouseEnter = () => {
     hasMoved.current = false;
   };
 
   const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const clientX = e.clientX;
+    const clientY = e.clientY;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setZoomPos({ x, y });
-    if (!hasMoved.current) {
-      hasMoved.current = true;
-      setIsZooming(true);
-    }
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      const x = ((clientX - rect.left) / rect.width) * 100;
+      const y = ((clientY - rect.top) / rect.height) * 100;
+      setZoomPos({ x, y });
+      if (!hasMoved.current) {
+        hasMoved.current = true;
+        setIsZooming(true);
+      }
+    });
   };
 
   // Extract base product ID and variant index from URL

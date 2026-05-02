@@ -337,12 +337,7 @@ export default function BestSeller() {
                       : 0;
                     const displayImages = product.displayImages || product.images || [];
                     return (
-                      <motion.div
-                        key={product._id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: index * 0.1, ease: "easeOut" }}
-                      >
+                      <div key={product._id}>
                         <ProductCard
                           id={product._id}
                           baseProductId={product.baseProductId}
@@ -360,7 +355,7 @@ export default function BestSeller() {
                           context="bestseller"
                           shortDescription={product.subDescription}
                         />
-                      </motion.div>
+                      </div>
                     );
                   })}
                 </div>

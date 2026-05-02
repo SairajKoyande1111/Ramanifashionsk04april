@@ -9,14 +9,15 @@ import { useToast } from "@/hooks/use-toast";
 import { localStorageService } from "@/lib/localStorage";
 import { useAuthUI } from "@/contexts/AuthUIContext";
 
-const prefetchProduct = async (productId: string) => {
-  await queryClient.prefetchQuery({
+const prefetchProduct = (productId: string) => {
+  queryClient.prefetchQuery({
     queryKey: ["/api/products", productId],
     queryFn: async () => {
       const response = await fetch(`/api/products/${productId}`);
       if (!response.ok) throw new Error("Failed to fetch product");
       return response.json();
     },
+    staleTime: 60000,
   });
 };
 
