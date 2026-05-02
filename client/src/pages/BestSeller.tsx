@@ -170,7 +170,7 @@ export default function BestSeller() {
                 Best Sellers
               </h1>
               <p className="text-muted-foreground" data-testid="text-results-count">
-                {pagination.total} products
+                {pagination.variantTotal ?? products.length} variants
               </p>
             </div>
 
