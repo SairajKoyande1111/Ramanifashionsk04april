@@ -496,6 +496,7 @@ export default function Sale() {
                           reviewCount={product.reviewCount}
                           isNew={product.isNew}
                           isBestseller={product.isBestseller}
+                          inStock={product.variantInStock !== undefined ? product.variantInStock !== false : product.inStock !== false}
                           context="sale"
                           shortDescription={product.subDescription}
                         />

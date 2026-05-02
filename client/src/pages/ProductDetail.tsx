@@ -1115,6 +1115,7 @@ export default function ProductDetail() {
                     reviewCount={similarProduct.reviewCount}
                     isNew={similarProduct.isNew}
                     isBestseller={similarProduct.isBestseller}
+                    inStock={similarProduct.variantInStock !== undefined ? similarProduct.variantInStock !== false : similarProduct.inStock !== false}
                     shortDescription={similarProduct.subDescription}
                     description={similarProduct.description}
                   />

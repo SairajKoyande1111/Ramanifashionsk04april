@@ -352,6 +352,7 @@ export default function BestSeller() {
                           reviewCount={product.reviewCount}
                           isNew={product.isNew}
                           isBestseller={product.isBestseller}
+                          inStock={product.variantInStock !== undefined ? product.variantInStock !== false : product.inStock !== false}
                           context="bestseller"
                           shortDescription={product.subDescription}
                         />

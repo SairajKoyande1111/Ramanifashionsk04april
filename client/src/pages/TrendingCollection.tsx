@@ -490,6 +490,7 @@ export default function TrendingCollection() {
                           reviewCount={product.reviewCount}
                           isNew={product.isNew}
                           isBestseller={product.isBestseller}
+                          inStock={product.variantInStock !== undefined ? product.variantInStock !== false : product.inStock !== false}
                           context="trending"
                           shortDescription={product.subDescription}
                         />

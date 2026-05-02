@@ -491,6 +491,7 @@ export default function NewArrivals() {
                           reviewCount={product.reviewCount}
                           isNew={product.isNew}
                           isBestseller={product.isBestseller}
+                          inStock={product.variantInStock !== undefined ? product.variantInStock !== false : product.inStock !== false}
                           context="new-arrivals"
                           shortDescription={product.subDescription}
                         />
