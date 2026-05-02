@@ -544,7 +544,7 @@ export default function ProductDetail() {
               </motion.div>
             </AnimatePresence>
 
-            <div className="flex flex-row flex-wrap gap-2 sm:gap-3 justify-center">
+            <div className="flex flex-row flex-nowrap gap-2 sm:gap-3 overflow-x-auto scrollbar-hide justify-start sm:justify-center pb-1">
               {images.slice(0, 5).map((img: string, idx: number) => (
                 <button
                   key={idx}
