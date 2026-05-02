@@ -226,7 +226,7 @@ export default function CustomerManagement() {
   };
 
   if (!adminToken) {
-    setLocation("/admin/login");
+    setLocation("/admin/ramanifashionlogin");
     return null;
   }
 

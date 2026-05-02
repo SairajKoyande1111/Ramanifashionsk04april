@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("admin");
-    setLocation("/admin/login");
+    setLocation("/admin/ramanifashionlogin");
   };
 
   if (isLoading || !isAuthenticated) {

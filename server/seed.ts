@@ -548,14 +548,18 @@ export async function seedDatabase() {
       console.log('✅ Settings initialized with shipping charges: ₹0, free shipping threshold: ₹999');
     }
     
-    // Seed admin user if not exists
-    const adminEmail = 'admin@ramanifashion.com';
-    const existingAdmin = await AdminUser.findOne({ email: adminEmail });
+    // Seed admin user — always ensure correct credentials on startup
+    const adminEmail = 'deepahande@ramanifashion.in';
+    const adminPassword = 'deepahande@132231';
+    const existingAdmin = await AdminUser.findOne({});
     if (!existingAdmin) {
-      console.log('🌱 Creating admin user...');
-      const hashedPassword = await bcrypt.hash('admin123', 10);
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
       await AdminUser.create({ email: adminEmail, password: hashedPassword, role: 'admin' });
       console.log('✅ Admin user created:', adminEmail);
+    } else if (existingAdmin.email !== adminEmail) {
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      await AdminUser.findByIdAndUpdate(existingAdmin._id, { email: adminEmail, password: hashedPassword });
+      console.log('✅ Admin credentials updated to:', adminEmail);
     } else {
       console.log('✅ Admin user already exists:', adminEmail);
     }

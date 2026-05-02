@@ -453,7 +453,7 @@ export default function MediaManagement() {
   const categoryOptions = buildCategoryOptions(categories);
 
   if (!adminToken) {
-    setLocation("/admin/login");
+    setLocation("/admin/ramanifashionlogin");
     return null;
   }
 

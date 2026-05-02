@@ -106,7 +106,7 @@ export default function AdminDashboard() {
   const adminToken = localStorage.getItem("adminToken");
 
   if (!adminToken) {
-    window.location.href = "/admin/login";
+    window.location.href = "/admin/ramanifashionlogin";
     return null;
   }
 

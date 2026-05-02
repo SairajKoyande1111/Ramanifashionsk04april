@@ -15,13 +15,13 @@ export function useAdminAuth() {
     const adminToken = localStorage.getItem("adminToken");
     
     if (!adminToken) {
-      setLocation("/admin/login");
+      setLocation("/admin/ramanifashionlogin");
       return;
     }
 
     if (error || (authData && !authData.valid)) {
       localStorage.removeItem("adminToken");
-      setLocation("/admin/login");
+      setLocation("/admin/ramanifashionlogin");
     }
   }, [authData, error, setLocation]);
 

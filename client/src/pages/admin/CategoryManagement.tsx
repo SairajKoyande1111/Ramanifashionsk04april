@@ -75,7 +75,7 @@ export default function CategoryManagement() {
   const editSubImageInputRef = useRef<HTMLInputElement>(null);
 
   if (!adminToken) {
-    setLocation("/admin/login");
+    setLocation("/admin/ramanifashionlogin");
     return null;
   }
 

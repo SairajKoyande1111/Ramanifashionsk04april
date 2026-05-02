@@ -81,7 +81,7 @@ export default function Settings() {
   };
 
   if (!adminToken) {
-    setLocation("/admin/login");
+    setLocation("/admin/ramanifashionlogin");
     return null;
   }
 

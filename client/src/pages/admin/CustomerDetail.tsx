@@ -119,7 +119,7 @@ export default function CustomerDetail() {
   };
 
   if (!adminToken) {
-    setLocation("/admin/login");
+    setLocation("/admin/ramanifashionlogin");
     return null;
   }
 

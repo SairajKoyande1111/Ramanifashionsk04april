@@ -69,7 +69,7 @@ function Router() {
       <Route path="/returns" component={Returns} />
       <Route path="/faq" component={FAQ} />
       <Route path="/size-guide" component={SizeGuide} />
-      <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/admin/ramanifashionlogin" component={AdminLogin} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
       <Route path="/admin/products" component={ProductManagement} />
