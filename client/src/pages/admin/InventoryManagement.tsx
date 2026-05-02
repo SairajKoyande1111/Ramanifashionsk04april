@@ -1409,16 +1409,6 @@ export default function InventoryManagement() {
             )}
 
             <div className="flex gap-6 flex-wrap">
-              {productForm.category === "SAREES" && (
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="edit-blousePiece"
-                    checked={productForm.blousePiece}
-                    onCheckedChange={(checked) => setProductForm({...productForm, blousePiece: checked as boolean})}
-                  />
-                  <Label htmlFor="edit-blousePiece">Blouse Piece</Label>
-                </div>
-              )}
 
               <div className="flex items-center gap-2">
                 <Checkbox

@@ -673,17 +673,6 @@ export default function ProductManagement() {
               )}
 
               <div className="flex gap-6 flex-wrap">
-                {fieldConfig?.showBlousePiece && (
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="blousePiece"
-                      checked={productForm.blousePiece}
-                      onCheckedChange={(checked) => setProductForm({...productForm, blousePiece: checked as boolean})}
-                      data-testid="checkbox-blouse-piece"
-                    />
-                    <Label htmlFor="blousePiece" data-testid="label-blouse-piece">Blouse Piece</Label>
-                  </div>
-                )}
 
                 {productForm.category === "JEWELLERY" && (
                   <>

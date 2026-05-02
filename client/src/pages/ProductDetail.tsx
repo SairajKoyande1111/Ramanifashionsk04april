@@ -897,16 +897,6 @@ export default function ProductDetail() {
                         </span>
                       </div>
                     )}
-                    {product.blousePiece !== undefined && (
-                      <div>
-                        <span className="font-semibold text-foreground">
-                          Blouse Piece:{" "}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {product.blousePiece ? "Yes" : "No"}
-                        </span>
-                      </div>
-                    )}
                     {currentColorVariant?.sku && (
                       <div>
                         <span className="font-semibold text-foreground">
