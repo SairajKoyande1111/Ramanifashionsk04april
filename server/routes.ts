@@ -3077,9 +3077,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }
           
-          // Calculate stats
+          // Calculate stats (revenue only from paid/confirmed orders)
+          const paidStatuses = ['approved', 'processing', 'shipped', 'delivered'];
           const totalOrders = orders.length;
-          const totalSpent = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+          const totalSpent = orders
+            .filter(o => paidStatuses.includes(o.orderStatus as string))
+            .reduce((sum, order) => sum + (order.total || 0), 0);
           const pendingOrders = orders.filter(o => o.orderStatus === 'pending').length;
           const completedOrders = orders.filter(o => o.orderStatus === 'delivered').length;
           const wishlistProducts = (wishlist && Array.isArray(wishlist.items))
@@ -3305,8 +3308,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const total = await Order.countDocuments(query);
 
+      // Revenue: sum total only for paid/confirmed orders matching the current filters
+      const paidStatusFilter = { ...query, orderStatus: { $in: ['approved', 'processing', 'shipped', 'delivered'] } };
+      const revenueAgg = await Order.aggregate([
+        { $match: paidStatusFilter },
+        { $group: { _id: null, total: { $sum: '$total' } } }
+      ]);
+      const totalRevenue = revenueAgg[0]?.total || 0;
+
       res.json({
         orders,
+        totalRevenue,
         pagination: {
           page: pageNum,
           limit: limitNum,

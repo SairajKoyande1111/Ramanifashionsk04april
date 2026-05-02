@@ -82,6 +82,7 @@ interface Order {
 
 interface OrdersResponse {
   orders: Order[];
+  totalRevenue: number;
   pagination: {
     page: number;
     limit: number;
@@ -244,7 +245,7 @@ export default function OrderManagement() {
       total: ordersData.pagination.total,
       pending: orders.filter(o => o.orderStatus === 'pending').length,
       processing: orders.filter(o => o.orderStatus === 'processing').length,
-      revenue: orders.filter(o => o.paymentStatus === 'paid').reduce((sum, o) => sum + o.total, 0)
+      revenue: ordersData.totalRevenue ?? 0
     };
   }, [ordersData]);
 
