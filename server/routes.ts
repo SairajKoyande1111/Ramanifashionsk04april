@@ -2661,7 +2661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalOrders = await Order.countDocuments();
       
       const orders = await Order.find().lean();
-      const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+      const totalRevenue = orders.reduce((sum, order) => sum + (order.total || 0), 0);
       
       const lowStockProducts = await Product.countDocuments({ stockQuantity: { $lt: 10 } });
       const outOfStockProducts = await Product.countDocuments({ inStock: false });
@@ -2691,7 +2691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               year: { $year: "$createdAt" },
               month: { $month: "$createdAt" }
             },
-            revenue: { $sum: "$totalAmount" },
+            revenue: { $sum: "$total" },
             orders: { $sum: 1 }
           }
         },
@@ -2737,7 +2737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             _id: {
               week: { $week: "$createdAt" }
             },
-            sales: { $sum: "$totalAmount" }
+            sales: { $sum: "$total" }
           }
         },
         {
@@ -2879,14 +2879,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const orderDate = new Date(o.createdAt);
         const now = new Date();
         return orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
-      }).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+      }).reduce((sum, o) => sum + (o.total || 0), 0);
 
       const lastMonthRevenue = orders.filter(o => {
         const orderDate = new Date(o.createdAt);
         const now = new Date();
         const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
         return orderDate.getMonth() === lastMonth.getMonth() && orderDate.getFullYear() === lastMonth.getFullYear();
-      }).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+      }).reduce((sum, o) => sum + (o.total || 0), 0);
 
       const currentAvgOrderValue = currentMonthOrders > 0 ? currentMonthRevenue / currentMonthOrders : 0;
       const lastAvgOrderValue = lastMonthOrders > 0 ? lastMonthRevenue / lastMonthOrders : 0;
