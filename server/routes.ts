@@ -278,7 +278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         maxPrice,
         inStock,
         search,
-        sort = 'createdAt',
+        sort = 'updatedAt',
         order = 'desc',
         page = '1',
         limit = '12',
@@ -455,10 +455,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Normal sorting for other fields
         const sortObj: any = {};
-        // When sorting by createdAt (default), prepend displayOrder so admin-prioritised products appear first
-        if (sort === 'createdAt') {
-          sortObj['displayOrder'] = 1;
-        }
         sortObj[sort as string] = sortOrder;
 
         // Parse color filter if present for aggregation

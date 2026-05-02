@@ -142,7 +142,6 @@ export default function ProductManagement() {
     isTrending: false,
     isBestseller: false,
     onSale: false,
-    displayOrder: "",
     fabricComposition: "",
     dimensions: "",
     weight: "",
@@ -289,7 +288,6 @@ export default function ProductManagement() {
       isTrending: false,
       isBestseller: false,
       onSale: false,
-      displayOrder: "",
       fabricComposition: "",
       dimensions: "",
       weight: "",
@@ -385,7 +383,6 @@ export default function ProductManagement() {
       isTrending: isJewellery ? productForm.isTrending : false,
       isBestseller: isJewellery ? productForm.isBestseller : false,
       onSale: productForm.onSale,
-      displayOrder: productForm.displayOrder !== "" ? parseInt(productForm.displayOrder as string) : 9999,
       specifications: productForm.category === "JEWELLERY"
         ? {
             material: productForm.material || undefined,
@@ -674,22 +671,6 @@ export default function ProductManagement() {
                   )}
                 </div>
               )}
-
-              <div className="space-y-2">
-                <Label htmlFor="displayOrder" data-testid="label-display-order">
-                  Display Priority <span className="text-xs text-muted-foreground font-normal">(1 = show first, leave blank for default)</span>
-                </Label>
-                <Input
-                  id="displayOrder"
-                  type="number"
-                  min="1"
-                  placeholder="e.g. 1, 2, 3..."
-                  value={productForm.displayOrder}
-                  onChange={(e) => setProductForm({...productForm, displayOrder: e.target.value})}
-                  className="w-48"
-                  data-testid="input-display-order"
-                />
-              </div>
 
               <div className="flex gap-6 flex-wrap">
 
