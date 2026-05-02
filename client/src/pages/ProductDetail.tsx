@@ -588,12 +588,41 @@ export default function ProductDetail() {
               )}
             </div>
 
-            <h1
-              className="text-3xl font-bold mb-1 text-foreground"
-              data-testid="text-product-name"
-            >
-              {product.name}
-            </h1>
+            <div className="flex items-center gap-2 mb-1">
+              <h1
+                className="text-3xl font-bold text-foreground flex-1"
+                data-testid="text-product-name"
+              >
+                {product.name}
+              </h1>
+              <Button
+                variant="outline"
+                size="icon"
+                className={`rounded-full flex-shrink-0 ${isWishlisted ? 'bg-destructive border-destructive hover:bg-destructive' : ''}`}
+                onClick={() => {
+                  const payload = { productId: product._id, selectedColor: currentColorVariant?.color };
+                  if (isWishlisted) {
+                    removeFromWishlistMutation.mutate(payload);
+                  } else {
+                    addToWishlistMutation.mutate(payload);
+                  }
+                }}
+                disabled={addToWishlistMutation.isPending || removeFromWishlistMutation.isPending}
+                data-testid="button-add-to-wishlist"
+              >
+                <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-white text-white' : ''}`} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full flex-shrink-0"
+                onClick={handleShare}
+                data-testid="button-share"
+                title="Share this product"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </div>
             
             {product.subDescription && (
               <p
@@ -814,33 +843,6 @@ export default function ProductDetail() {
               >
                 <Sparkles className="h-4 w-4 mr-2" />
                 Buy Now
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className={`rounded-full ${isWishlisted ? 'bg-destructive border-destructive hover:bg-destructive' : ''}`}
-                onClick={() => {
-                  const payload = { productId: product._id, selectedColor: currentColorVariant?.color };
-                  if (isWishlisted) {
-                    removeFromWishlistMutation.mutate(payload);
-                  } else {
-                    addToWishlistMutation.mutate(payload);
-                  }
-                }}
-                disabled={addToWishlistMutation.isPending || removeFromWishlistMutation.isPending}
-                data-testid="button-add-to-wishlist"
-              >
-                <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-white text-white' : ''}`} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-full"
-                onClick={handleShare}
-                data-testid="button-share"
-                title="Share this product"
-              >
-                <Share2 className="h-4 w-4" />
               </Button>
             </div>
 
