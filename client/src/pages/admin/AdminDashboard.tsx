@@ -383,7 +383,7 @@ export default function AdminDashboard() {
                           <div className="flex items-center gap-3 flex-shrink-0">
                             <OrderStatusBadge status={order.orderStatus} />
                             <span className="text-sm font-bold text-gray-900 dark:text-white" data-testid={`text-order-amount-${order._id}`}>
-                              {formatINR(order.totalAmount ?? 0)}
+                              {formatINR(order.total ?? 0)}
                             </span>
                           </div>
                         </div>
