@@ -131,10 +131,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             { $unset: { subcategory: "" } }
           );
         }
-        // Clear category field on products directly assigned to this parent category name
+        // Clear subcategory field on products directly assigned to this parent category name
         await Product.updateMany(
           { category: category.name },
-          { $unset: { subcategory: "" }, $set: { category: "" } }
+          { $unset: { subcategory: "" } }
         );
       }
       await Category.findByIdAndDelete(req.params.id);

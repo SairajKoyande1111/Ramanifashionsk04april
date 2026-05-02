@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./seed";
+import { Product, Category } from "./models";
 import path from "path";
 import fs from "fs";
 
@@ -141,7 +142,28 @@ app.use((req, res, next) => {
 (async () => {
   // Seed database with sample products
   await seedDatabase();
-  
+
+  // Clean up stale subcategory references on products
+  try {
+    const allCategories = await Category.find({});
+    const validSubNames = new Set<string>();
+    for (const cat of allCategories) {
+      const subs: any[] = Array.isArray(cat.subCategories) ? cat.subCategories : [];
+      for (const sub of subs) {
+        if (sub.name) validSubNames.add(sub.name);
+      }
+    }
+    const result = await Product.updateMany(
+      { subcategory: { $exists: true, $ne: "" }, $expr: { $not: { $in: ["$subcategory", Array.from(validSubNames)] } } },
+      { $unset: { subcategory: "" } }
+    );
+    if (result.modifiedCount > 0) {
+      log(`Cleaned ${result.modifiedCount} products with stale subcategory references`);
+    }
+  } catch (e: any) {
+    log(`Subcategory cleanup warning: ${e.message}`);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
